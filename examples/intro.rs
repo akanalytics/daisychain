@@ -1,10 +1,18 @@
 use chainsaw::prelude::*;
 
+/// running examples
+///
 /// cargo test --example intro
 ///     
 /// RUST_LOG=trace cargo test --example intro -- --nocapture
 ///
 ///
+/// add to Cargo.toml
+/// 
+/// [dev-dependencies]
+/// env_logger = "0.9"
+/// test-log = {version = "0.2"}
+/// 
 
 fn main() {
     let _ = Some(" Hello").ws().text("He");
@@ -15,9 +23,14 @@ mod tests {
     use chainsaw::prelude::*;
     use test_log::test;
 
+    ///
+    /// Option<&str> is a simple cursor, offering matching functions but no
+    /// selection. Handy for unit testing.
+    /// None indicates that no match mas made
+    ///
     #[test]
     fn test_intro() {
-        // whitespace - 0zero or more whitespace characters
+        // whitespace - zero or more whitespace characters
         assert_eq!(Some(" Hello").ws(), Some("Hello"));
         assert_eq!(Some("\nHello").ws(), Some("Hello"));
         assert_eq!(None.ws(), None);
@@ -28,16 +41,17 @@ mod tests {
         assert_eq!(None.hws(), None);
 
         // match end-of-string/end-of-stream
-        assert_eq!(Some("Hello").is_eos(), None);
-        assert_eq!(Some("").is_eos(), Some(""));
-        assert_eq!(None.is_eos(), None);
+        assert_eq!(Some("Hello").text_eos(), None);
+        assert_eq!(Some("").text_eos(), Some(""));
+        assert_eq!(None.text_eos(), None);
 
         // match end-of-line (end-of-stream is treated as eol too!)
-        assert_eq!(Some("\nHello").is_eol(), Some("Hello"));
-        assert_eq!(Some("\n\nHello").is_eol(), Some("\nHello"));
-        assert_eq!(Some("\r\nHello").is_eol(), Some("Hello"));
-        assert_eq!(Some("").is_eol(), Some(""));
-        assert_eq!(None.is_eol(), None);
+        assert_eq!(Some("Hello").text_eol(), None);
+        assert_eq!(Some("\nHello").text_eol(), Some("Hello"));
+        assert_eq!(Some("\n\nHello").text_eol(), Some("\nHello"));
+        assert_eq!(Some("\r\nHello").text_eol(), Some("Hello"));
+        assert_eq!(Some("").text_eol(), Some(""));
+        assert_eq!(None.text_eol(), None);
 
         // match by character
         let chars: Vec<_> = "Hle".chars().collect();

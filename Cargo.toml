@@ -1,11 +1,15 @@
 [package]
-authors = ["andy watkins <andy@webcalculator.com>"]
-description = "a method-chaining parsing library"
+authors = ["Andy Watkins <andy@webcalculator.com>"]
+description = "a method chaining parsing library"
 edition = "2021"
-keywords = ["parsing"]
-license = "GPL-3.0+"
 name = "chainsaw"
 version = "0.1.0"
+license = "MIT OR Apache-2.0"
+rust-version = "1.56"
+repository = "https://github.com/akanalytics/chainsaw"
+keywords = ["parsing", "parser"]
+categories = ["parsing", ]
+readme = "README.md"
 
 
 [dependencies]

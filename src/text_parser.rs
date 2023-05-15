@@ -447,7 +447,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    fn is_eos(self) -> Self {
+    fn text_eos(self) -> Self {
         apply(
             self,
             |s| if s.is_empty() { Some(s) } else { None },
@@ -457,7 +457,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    fn is_eol(self) -> Self {
+    fn text_eol(self) -> Self {
         #[allow(clippy::unnecessary_lazy_evaluations)]
         apply(
             self,
