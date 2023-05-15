@@ -1,13 +1,7 @@
+use chainsaw::prelude::*;
 use std::str::FromStr;
 
-use chainsaw::prelude::*;
-
-use strum::VariantNames;
-use strum_macros::{EnumString, EnumVariantNames};
-
-#[derive(PartialEq, Debug, EnumVariantNames)]
-#[strum(serialize_all = "UPPERCASE")]
-
+#[derive(PartialEq, Debug)]
 enum Color {
     Red,
     Blue,
@@ -35,29 +29,8 @@ fn parse_enum(c: Cursor) -> Result<(Cursor, Color), ParseError> {
     c.text_alt(&["Red", "Blue", "Green"]).parse_selection()
 }
 
-// Example using strum crate.
-//
-// strum gives us
-//   derive(EnumVariantNames) + trait strum::VariantNames => FancyColor::VARIANTS
-//   derive(EnumString) + trait FromStr => FancyColor::from_str
-// the parse methods can then use VARIANTS and FromStr
-// created by strum derive directives
-//
-
-#[derive(PartialEq, Debug, EnumVariantNames, EnumString)]
-enum FancyColor {
-    Burgundy,
-    Azure,
-    Lime,
-}
-
-fn parse_fancy_enum(c: Cursor) -> Result<(Cursor, FancyColor), ParseError> {
-    c.text_alt(FancyColor::VARIANTS).parse_selection()
-}
-
 fn main() {
     let _ = parse_enum(cursor("Red"));
-    let _ = parse_fancy_enum(cursor("Burgundy"));
 }
 
 #[cfg(test)]
@@ -75,11 +48,6 @@ mod tests {
         let (c, color) = parse_enum("Red Arrow".into())?;
         assert_eq!(color, Color::Red);
         assert_eq!(c.str()?, " Arrow");
-
-        let (c, color) = parse_fancy_enum("Burgundy Arrow".into())?;
-        assert_eq!(color, FancyColor::Burgundy);
-        assert_eq!(c.str()?, " Arrow");
-
         Ok(())
     }
 }
