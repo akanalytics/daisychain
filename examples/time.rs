@@ -23,7 +23,9 @@ impl FromStr for Time {
             .parse_selection::<u32>()? // chainsaw will use u32::FromStr
             .text(":")
             .digits(2..=2)
-            .parse_selection()?; // often no need to specify type explicitly
+            .parse_selection()? // often no need to specify type explicitly
+            .text_eos()         // ensure we are at end-of-string
+            .validate()?;
         Ok(Time { hours, mins })
     }
 }
@@ -35,13 +37,14 @@ fn main() {
 #[cfg(test)]
 mod tests {
 
-    use test_log::test;
     use super::*;
+    use test_log::test;
 
     #[test]
     fn test_parse_0923() {
         assert_eq!(Time::from_str("09:23").unwrap(), Time::new(9, 23));
         assert!(Time::from_str("09+23").is_err());
+        assert!(Time::from_str("09:23X").is_err());
     }
 
     #[test]

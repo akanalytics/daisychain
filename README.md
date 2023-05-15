@@ -23,7 +23,9 @@ impl FromStr for Time {
             .parse_selection::<u32>()? // chainsaw will use u32::FromStr
             .text(":")
             .digits(2..=2)
-            .parse_selection()?;       // often no need to specify type explicitly
+            .parse_selection()?        // often no need to specify type explicitly
+            .text_eos()                // ensure we are at end-of-string
+            .validate()?;
         Ok(Time { hours, mins })
     }
 }
