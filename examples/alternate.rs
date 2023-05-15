@@ -14,7 +14,7 @@ enum Clock {
 
 fn parse_clock(c: Cursor) -> Result<(Cursor, Clock), ParseError> {
     let (c1, h, m) = c
-        .digits(2..=2)
+        .digits(1..=2)
         .parse_selection()?
         .text(":")
         .digits(2..=2)
@@ -94,7 +94,7 @@ mod tests {
         assert_eq!(parse_clock("11:35 AM X".into()).unwrap().1, H12(11, 35, AM));
         assert_eq!(parse_clock("11:59 PM Y".into()).unwrap().1, H12(11, 59, PM));
         assert_eq!(parse_clock("1:59Z".into()).unwrap().1, H24(1, 59));
-        assert_eq!(parse_clock_v2("1:59Z".into()).is_err(), false);
+        assert_eq!(parse_clock_v2("1:59Z".into()).is_err(), true);
         assert_eq!(parse_clock("01:59Z".into()).unwrap().1, H24(1, 59));
 
         // check that the cursor is left at the right terminating position
