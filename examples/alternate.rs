@@ -85,6 +85,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use test_log::test;
+    use super::*;
 
     #[test]
     fn test_parse_clock() -> Result<(), ParseError> {

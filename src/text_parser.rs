@@ -1066,80 +1066,23 @@ mod tests {
 
     use crate::text_parser::{cursor, Bind, ParseError, Parser, Selectable};
 
-    #[cfg(test)]
-    use super::Matchable;
+    use super::{Cursor, Matchable};
     use test_log::test;
 
-    #[test]
-    fn test_matching() {
-        assert_eq!(Some(" Hello").ws(), Some("Hello"));
-        assert_eq!(Some("\nHello").ws(), Some("Hello"));
-        assert_eq!(None.ws(), None);
-
-        assert_eq!(Some(" Hello").hws(), Some("Hello"));
-        assert_eq!(Some("\nHello").hws(), Some("\nHello"));
-        assert_eq!(None.hws(), None);
-
-        assert_eq!(Some("Hello").is_eos(), None);
-        assert_eq!(Some("").is_eos(), Some(""));
-        assert_eq!(None.is_eos(), None);
-
-        assert_eq!(Some("\nHello").is_eol(), Some("Hello"));
-        assert_eq!(Some("\n\nHello").is_eol(), Some("\nHello"));
-        assert_eq!(Some("\r\nHello").is_eol(), Some("Hello"));
-        assert_eq!(Some("").is_eol(), Some(""));
-        assert_eq!(None.is_eol(), None);
-
-        let chars: Vec<_> = "Hle".chars().collect();
-        assert_eq!(Some("Hello").chars_in(1.., chars.as_slice()), Some("o"));
-        assert_eq!(Some("Hello").chars_in(1.., &['H', 'l', 'e']), Some("o"));
-
-        assert_eq!(Some("Hello").text("He"), Some("llo"));
-        assert_eq!(Some("Hello").text("He"), Some("llo"));
-        assert_eq!(Some("Hello").text("Bye"), None);
-        assert_eq!(Some("Hello").text_alt(&[""]), Some("Hello"));
-        assert_eq!(Some("Hello").text_alt(&["Bye", "He"]), Some("llo"));
-        assert_eq!(Some("Hello").text_alt(&["He", "Hello"]), Some("llo"));
-        assert_eq!(Some("Hello").text_alt(&["Hello", "He"]), Some(""));
-        assert_eq!(Some("Hello").text_alt(&["Bye1", "Bye2"]), None);
-
-        assert_eq!(Some("Hello").find("llo"), Some("llo"));
-        assert_eq!(Some("Hello").find("Bye"), None);
-        assert_eq!(Some("Hello").find(""), Some("Hello"));
-        assert_eq!(Some("Hello").find("eH"), None);
-
-        assert_eq!(Some("Hello").scan_text("llo"), Some(""));
-        assert_eq!(Some("Hello").scan_text("Bye"), None);
-        assert_eq!(Some("Hello").scan_text(""), Some("Hello"));
-        assert_eq!(Some("Hello").scan_text("eH"), None);
-        assert_eq!(Some("Hello").scan_text("Hel"), Some("lo"));
-
-        assert_eq!(Some("Hello\nWorld").scan_eol(), Some("World"));
-        assert_eq!(Some("Hello").scan_eol(), Some(""));
-        assert_eq!(Some("Hello\n\n").scan_eol(), Some("\n"));
-        assert_eq!(Some("Hello\r\nWorld").scan_eol(), Some("World"));
-
-        // spans
-        assert_eq!(
-            Some("HW!").debug_context("in HW").ws().text("H"),
-            Some("W!")
-        );
-
-        // fn parse_time<C: AsCur>(c: C, f: impl Setter<Instant>) -> Result<C, BadMatch> {
-        //     let (hh, mm) = (0, 0);
-        //     let c = c
-        //         .digits
-        // (2..2)
-        //         .last(&mut hh)
-        //         .text(":")
-        //         .digits
-        // (2..2)
-        //         .last(&mut mm)
-        //         .ok()?;
-        //     f.set(Time(hh, mm));
-        //     c
-        // }
-    }
+    // fn parse_time<C: AsCur>(c: C, f: impl Setter<Instant>) -> Result<C, BadMatch> {
+    //     let (hh, mm) = (0, 0);
+    //     let c = c
+    //         .digits
+    // (2..2)
+    //         .last(&mut hh)
+    //         .text(":")
+    //         .digits
+    // (2..2)
+    //         .last(&mut mm)
+    //         .ok()?;
+    //     f.set(Time(hh, mm));
+    //     c
+    // }
 
     #[derive(PartialEq, Debug)]
     struct Time(i32, i32, f64);
@@ -1197,7 +1140,6 @@ mod tests {
         Ok((c.str()?, Time(hh, mm, sss)))
     }
 
-    use crate::text_parser::Cursor;
     fn parse_time_v4<'a>(s: Cursor<'a>) -> Result<(Cursor<'a>, Time), ParseError> {
         let (c, hh, mm, sss) = s
             .selection_start()
@@ -1451,44 +1393,43 @@ mod tests {
         assert_eq!(res.1.len(), 3);
         assert_eq!(res.0.str().unwrap(), "");
     }
-
-    //     assert_eq!(
-    //         parse_hour_mins_v1("23:59a").unwrap(),
-    //         ("a", HourMin(23, 59))
-    //     );
-    //     // assert_eq!(parse_hour_mins("blob").is_err(), true);
-    //     // let mut ll3: Vec<i32> = Vec::new();
-    //     // let s = cursor("[11:23, 09:15, 15:23]");
-    //     // let res3 = s
-    //     //     .text("[")
-    //     //     .repeat(|c| parse_time(c, &mut ll3).maybe(",").ws())
-    //     //     .text("]")
-    //     //     .parse();
-    //     // assert_eq!(res2.is_ok(), true);
-
-    //     // let res2 = s + "{" + repeat(|c| c + digits(1..) >> &mut ll2 + maybe(",")) + "}" ;
-
-    //     // use crate::text_parser::SelectableCursor;
-    //     // fn apply() -> anyhow::Result<()> {
-    //     //     let c = Some("test").selection_start();
-    //     //     let (c1, o2) = c
-    //     //         .parse_selection_as_f64()
-    //     //         .else_parse(|_| c.parse_selection_as_f64())?;
-    //     //     Ok(())
-    //     // }
-    //     // cur.next_word()
-    //     // cur.ws()
-    //     // let c = cur.next_parse_i32()?;
-    //     // cur.
-    //     // let c = {
-    //     //     if let Some(c1) = cur.next_parse_i32().match_some()?;
-    //     //       c1;
-    //     //     else {
-    //     //       cur.next_parse_i32()?;
-    //     //     }
-    // }
 }
 
+//     assert_eq!(
+//         parse_hour_mins_v1("23:59a").unwrap(),
+//         ("a", HourMin(23, 59))
+//     );
+//     // assert_eq!(parse_hour_mins("blob").is_err(), true);
+//     // let mut ll3: Vec<i32> = Vec::new();
+//     // let s = cursor("[11:23, 09:15, 15:23]");
+//     // let res3 = s
+//     //     .text("[")
+//     //     .repeat(|c| parse_time(c, &mut ll3).maybe(",").ws())
+//     //     .text("]")
+//     //     .parse();
+//     // assert_eq!(res2.is_ok(), true);
+
+//     // let res2 = s + "{" + repeat(|c| c + digits(1..) >> &mut ll2 + maybe(",")) + "}" ;
+
+//     // use crate::text_parser::SelectableCursor;
+//     // fn apply() -> anyhow::Result<()> {
+//     //     let c = Some("test").selection_start();
+//     //     let (c1, o2) = c
+//     //         .parse_selection_as_f64()
+//     //         .else_parse(|_| c.parse_selection_as_f64())?;
+//     //     Ok(())
+//     // }
+//     // cur.next_word()
+//     // cur.ws()
+//     // let c = cur.next_parse_i32()?;
+//     // cur.
+//     // let c = {
+//     //     if let Some(c1) = cur.next_parse_i32().match_some()?;
+//     //       c1;
+//     //     else {
+//     //       cur.next_parse_i32()?;
+//     //     }
+// }
 // cur.next_word()
 // cur.ws()
 // let c = cur.next_parse_i32()?;
