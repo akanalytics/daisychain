@@ -11,6 +11,5 @@ mod error;
 mod selection;
 mod text_parser;
 mod util;
-mod graveyard;
 
 pub mod prelude;

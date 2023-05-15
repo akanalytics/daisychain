@@ -1,7 +1,7 @@
 use std::{
     cell::Cell,
     ops::{Bound, RangeBounds},
-    str::{FromStr},
+    str::FromStr,
 };
 
 use log::trace;
@@ -11,7 +11,7 @@ use crate::{error, error::ParseError, selection::Selection, util};
 thread_local!(static LABEL: Cell<&'static str> = Cell::new(""));
 
 #[inline]
-pub fn cursor<'a>(s: &'a str) -> Cursor<'a> {
+pub fn cursor(s: &str) -> Cursor {
     crate::text_parser::Cursor::from(s)
 }
 
@@ -34,12 +34,12 @@ impl<'p, T> Parser<'p, T> for for<'b> fn(&'b str) -> Result<(&'b str, T), ParseE
 }
 
 impl<'a, T, F> Parser<'a, T> for F
-where   
+where
     F: FnMut(Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError>,
 {
     fn parse(&mut self, s: Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError> {
         trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
-        Ok((self)(s)?)
+        (self)(s)
     }
 }
 
@@ -91,13 +91,14 @@ impl<'a, T, X> Parser<'a, T>
 #[derive(Debug, Clone)]
 pub struct Cursor<'a> {
     selection: Selection<'a>,
-    cur:       Option<&'a str>,
-    err:       Option<ParseError>,
-    context:   &'a str,
+    cur: Option<&'a str>,
+    err: Option<ParseError>,
+    context: &'a str,
 }
 
 // equal and error free
 impl<'a> PartialEq for Cursor<'a> {
+    #[allow(clippy::match_like_matches_macro)]
     fn eq(&self, other: &Self) -> bool {
         self.selection == other.selection
             && self.cur == other.cur
@@ -114,9 +115,9 @@ impl<'a> From<&'a str> for Cursor<'a> {
     fn from(s: &'a str) -> Self {
         Self {
             selection: Selection::Defaulted(s),
-            cur:       Some(s),
-            err:       None,
-            context:   "",
+            cur: Some(s),
+            err: None,
+            context: "",
         }
     }
 }
@@ -166,7 +167,7 @@ where
                 trace!(
                     "{label:<20} {msg:<10}({args:<10}) = '{inp}' => None",
                     label = LABEL.with(|f| f.get()),
-                    inp = util::formatter_str(&cur.str().unwrap_or_default())
+                    inp = util::formatter_str(cur.str().unwrap_or_default())
                 );
                 cur.set_error(error::failure(msg, s))
             }
@@ -292,7 +293,7 @@ pub trait Selectable<'a>: Matchable<'a> {
             } else {
                 return self.set_error(ParseError::NoMatch {
                     action: "",
-                    args:   "",
+                    args: "",
                 });
             }
         }
@@ -342,7 +343,7 @@ pub trait Selectable<'a>: Matchable<'a> {
             } else {
                 return self.set_error(ParseError::NoMatch {
                     action: "take_last",
-                    args:   "",
+                    args: "",
                 });
             }
         }
@@ -402,7 +403,12 @@ pub trait Matchable<'a>: Sized {
     }
 
     fn non_ws(self) -> Self {
-        apply(self, |s| Some(s.trim_start_matches(|c:char| !c.is_whitespace())), "non_ws", "")
+        apply(
+            self,
+            |s| Some(s.trim_start_matches(|c: char| !c.is_whitespace())),
+            "non_ws",
+            "",
+        )
     }
 
     fn hws(self) -> Self {
@@ -440,6 +446,7 @@ pub trait Matchable<'a>: Sized {
         )
     }
 
+    #[allow(clippy::wrong_self_convention)]
     fn is_eos(self) -> Self {
         apply(
             self,
@@ -449,14 +456,16 @@ pub trait Matchable<'a>: Sized {
         )
     }
 
+    #[allow(clippy::wrong_self_convention)]
     fn is_eol(self) -> Self {
+        #[allow(clippy::unnecessary_lazy_evaluations)]
         apply(
             self,
             |s| {
                 s.is_empty()
                     .then(|| s)
                     .or_else(|| s.strip_prefix("\r\n"))
-                    .or_else(|| s.strip_prefix("\n"))
+                    .or_else(|| s.strip_prefix('\n'))
             },
             "eol",
             "",
@@ -486,7 +495,7 @@ pub trait Matchable<'a>: Sized {
         const LEN: usize = ("\n").len();
         apply(
             self,
-            |s| s.find("\n").map(|i| &s[i + LEN..]).or_else(|| Some("")),
+            |s| s.find('\n').map(|i| &s[i + LEN..]).or(Some("")),
             "scan_eol",
             "",
         )
@@ -497,11 +506,24 @@ pub trait Matchable<'a>: Sized {
     }
 
     fn chars_not_in<R: RangeBounds<i32>>(self, _range: R, chars: &[char]) -> Self {
-        apply(self, |s| Some(s.trim_start_matches(|c: char| !chars.contains(&c))), "chars_not_in", "")
+        apply(
+            self,
+            |s| Some(s.trim_start_matches(|c: char| !chars.contains(&c))),
+            "chars_not_in",
+            "",
+        )
     }
 
-    fn chars_match<R: RangeBounds<i32>, F>(self, _range: R, mut pred: F) -> Self where F: FnMut(char) -> bool {
-        apply(self, |s| Some(s.trim_start_matches(|c: char| pred(c))), "chars_match", "")
+    fn chars_match<R: RangeBounds<i32>, F>(self, _range: R, pred: F) -> Self
+    where
+        F: FnMut(char) -> bool,
+    {
+        apply(
+            self,
+            |s| Some(s.trim_start_matches(pred)),
+            "chars_match",
+            "",
+        )
     }
 
     fn digits<R: RangeBounds<i32>>(self, range: R) -> Self {
@@ -512,7 +534,7 @@ pub trait Matchable<'a>: Sized {
         };
         apply(
             self,
-            |s| Some(s.trim_start_matches(|c: char| c.is_digit(10))),
+            |s| Some(s.trim_start_matches(|c: char| c.is_ascii_digit())),
             "digits_m",
             "",
         )
@@ -524,7 +546,7 @@ pub trait Matchable<'a>: Sized {
             self,
             |s| {
                 Some(s.trim_start_matches(|c: char| {
-                    c.is_alphanumeric() || c.is_digit(10) || c == '-'
+                    c.is_alphanumeric() || c.is_ascii_digit() || c == '-'
                 }))
             },
             "word",
@@ -766,10 +788,10 @@ impl<'a> Selectable<'a> for Cursor<'a> {
         trace!("selection_start({})", util::formatter(&self));
         if let Some(cur) = self.cur {
             Cursor {
-                cur:       self.cur,
+                cur: self.cur,
                 selection: Selection::Start(cur, None),
-                err:       self.err,
-                context:   self.context,
+                err: self.err,
+                context: self.context,
             }
         } else {
             trace!("skipping selection_start");
@@ -785,10 +807,10 @@ impl<'a> Selectable<'a> for Cursor<'a> {
                 Selection::Start(self.selection.start(), self.cur)
             );
             Self {
-                cur:       self.cur,
+                cur: self.cur,
                 selection: Selection::Start(self.selection.start(), self.cur),
-                err:       self.err,
-                context:   self.context,
+                err: self.err,
+                context: self.context,
             }
         } else {
             trace!("skipping selection_end");
@@ -813,9 +835,9 @@ impl<'a> Matchable<'a> for Cursor<'a> {
     fn set_str(self, s: &'a str) -> Self {
         Self {
             selection: self.selection.move_cursor(s),
-            cur:       self.cur.set_str(s),
-            err:       self.err,
-            context:   self.context,
+            cur: self.cur.set_str(s),
+            err: self.err,
+            context: self.context,
         }
     }
 
@@ -824,9 +846,9 @@ impl<'a> Matchable<'a> for Cursor<'a> {
         trace!("setting (selection) error to {e}");
         Self {
             selection: self.selection,
-            cur:       None,
-            err:       Some(e),
-            context:   self.context,
+            cur: None,
+            err: Some(e),
+            context: self.context,
         }
     }
 
@@ -989,7 +1011,9 @@ impl<'a, T1, T2, T3, T4> Matchable<'a> for (Cursor<'a>, T1, T2, T3, T4) {
 
     #[inline]
     fn validate(self) -> Result<Self, ParseError> {
-        self.0.validate().map(|c| (c, self.1, self.2, self.3, self.4))
+        self.0
+            .validate()
+            .map(|c| (c, self.1, self.2, self.3, self.4))
     }
 }
 
@@ -1068,7 +1092,7 @@ mod tests {
 
         let chars: Vec<_> = "Hle".chars().collect();
         assert_eq!(Some("Hello").chars_in(1.., chars.as_slice()), Some("o"));
-        assert_eq!(Some("Hello").chars_in(1.., &['H', 'l', 'e']), Some("o")); 
+        assert_eq!(Some("Hello").chars_in(1.., &['H', 'l', 'e']), Some("o"));
 
         assert_eq!(Some("Hello").text("He"), Some("llo"));
         assert_eq!(Some("Hello").text("He"), Some("llo"));

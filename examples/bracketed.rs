@@ -3,7 +3,7 @@ use chainsaw::prelude::*;
 #[derive(PartialEq, Debug)]
 struct QuotedText {
     quote: char,
-    text:  String,
+    text: String,
 }
 
 /// eg "'Hello World!', said Ferris"
@@ -22,21 +22,26 @@ fn parse_quoted_text(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
     Ok((c, QuotedText { quote, text }))
 }
 
-#[cfg(test)]
-use test_log::test;
-
-#[test]
-fn test_parse_quoted_text() -> Result<(), ParseError> {
-    let s = r##""Hello World!", said Ferris"##;
-    let (c, qt) = parse_quoted_text(cursor(s))?;
-    assert_eq!(qt, QuotedText {
-        quote: '"',
-        text:  "Hello World!".to_string(),
-    });
-    assert_eq!(c.str()?, ", said Ferris");
-    Ok(())
-}
-
 fn main() {
     let _ = parse_quoted_text(cursor("\"Hellow World!\""));
+}
+
+#[cfg(test)]
+mod tests {
+    use test_log::test;
+
+    #[test]
+    fn test_parse_quoted_text() -> Result<(), ParseError> {
+        let s = r##""Hello World!", said Ferris"##;
+        let (c, qt) = parse_quoted_text(cursor(s))?;
+        assert_eq!(
+            qt,
+            QuotedText {
+                quote: '"',
+                text: "Hello World!".to_string(),
+            }
+        );
+        assert_eq!(c.str()?, ", said Ferris");
+        Ok(())
+    }
 }
