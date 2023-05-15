@@ -189,10 +189,10 @@ where
     //  set start to 0, if < 0
     let start = start.unwrap_or_default() as usize;
     let end = end.unwrap_or(i32::MAX) as usize;
-    trace!(">>>> {action} {} -> {}", start, end);
+    // trace!(">>>> {action} {} -> {}", start, end);
 
     if let Some((i, t)) = s.match_indices(pred).nth(0) {
-        trace!(">>>> {action} matched on i={i} t={t} from s={s} s = {start} e = {end}");
+        // trace!(">>>> {action} matched on i={i} t={t} from s={s} s = {start} e = {end}");
 
         if i >= start && i <= end+1 {
             trace!(
@@ -581,7 +581,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     fn chars_in<R: RangeBounds<i32>>(self, range: R, chars: &[char]) -> Self {
-        trace!("Chats not in {chars:?}");
+        // trace!("Chats not in {chars:?}");
         find_first(
             self,
             range,
@@ -593,7 +593,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     fn chars_not_in<R: RangeBounds<i32>>(self, range: R, chars: &[char]) -> Self {
-        trace!("Chats not in {chars:?}");
+        // trace!("Chats not in {chars:?}");
         find_first(
             self,
             range,
