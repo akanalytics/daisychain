@@ -1,0 +1,47 @@
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+!output/**/.gitignore
+!output/**/.gitkeep
+
+
+# allows local editing of config files
+*.local.*
+**/log.txt
+/junk
+logfile.txt  
+
+# python compiled files
+*.pyc
+
+# intellij + vscode stuff
+.idea
+modules.xml
+odonata.iml
+vcs.xml
+workspace.*
+perf.out
+callgrind.out.*
+
+# profiling output
+**/perf.*.data*
+**/massif.out*
+**/perf.data.*
+**/perf.data
+**/perf.txt
+**/*flamegraph*.svg
+flame.svg
+cachegrind.out.*
+
+
+# Added by cargo
+/target
+

@@ -1,0 +1,20 @@
+[package]
+authors = ["andy watkins <andy@webcalculator.com>"]
+description = "a method-chaining parsing library"
+edition = "2021"
+keywords = ["parsing"]
+license = "GPL-3.0+"
+name = "chainsaw"
+version = "0.1.0"
+
+
+[dependencies]
+log = {version = "0.4", features = ["release_max_level_debug"]}
+
+[dev-dependencies]
+env_logger = "0.9"
+test-log = {version = "0.2"}
+# tracing = {version = "0.1", default-features = false}
+# tracing-subscriber = {version = "0.3", default-features = false, features = ["env-filter", "fmt"]}
+
+[features]
