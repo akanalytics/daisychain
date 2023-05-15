@@ -191,7 +191,7 @@ where
     let end = end.unwrap_or(i32::MAX) as usize;
     // trace!(">>>> {action} {} -> {}", start, end);
 
-    if let Some((i, t)) = s.match_indices(pred).nth(0) {
+    if let Some((i, _t)) = s.match_indices(pred).nth(0) {
         // trace!(">>>> {action} matched on i={i} t={t} from s={s} s = {start} e = {end}");
 
         if i >= start && i <= end+1 {
