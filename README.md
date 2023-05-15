@@ -1,3 +1,5 @@
+[![dependency status](https://deps.rs/repo/github/akanalytics/chainsaw/status.svg)](https://deps.rs/repo/github/akanalytics/chainsaw)
+
 `chainsaw` provides a library for parsing unicode text. It aims to have a gentle and intuitive API, without sacrificing performance (it can be zero-copy). Being a library, rather than a framework means that it can be used alongside and complement other parsing toolkits.
 
 ## Synopsis
@@ -16,7 +18,7 @@ impl FromStr for Time {
 
     /// eg "09:23" or "23:59"
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_cursor, hours, mins) = cursor(s)
+        let (_cursor, hours, mins) = Cursor::from(s)
             .digits(2..=2)             // matching two digits also sets the selection to those digits
             .parse_selection::<u32>()? // chainsaw will use u32::FromStr
             .text(":")
