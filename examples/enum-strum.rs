@@ -18,12 +18,12 @@ enum FancyColor {
     Lime,
 }
 
-fn parse_fancy_enum(c: Cursor) -> Result<(Cursor, FancyColor), ParseError> {
+fn parse_fancy_enum(c: cs::Cursor) -> Result<(cs::Cursor, FancyColor), cs::ParseError> {
     c.text_alt(FancyColor::VARIANTS).parse_selection()
 }
 
 fn main() {
-    let _ = parse_fancy_enum(cursor("Burgundy"));
+    let _ = parse_fancy_enum("Burgundy".into());
 }
 
 #[cfg(test)]

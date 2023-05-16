@@ -12,7 +12,7 @@ enum Clock {
     H24(u32, u32),       // "14:30"
 }
 
-fn parse_clock(c: Cursor) -> Result<(Cursor, Clock), ParseError> {
+fn parse_clock(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
     let (c1, h, m) = c
         .digits(1..=2)
         .parse_selection()?
@@ -48,7 +48,7 @@ fn parse_clock(c: Cursor) -> Result<(Cursor, Clock), ParseError> {
 }
 
 // improved version disallows "1:59" as 24H, and insists on "01:59"
-fn parse_clock_v2(c: Cursor) -> Result<(Cursor, Clock), ParseError> {
+fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
     if let Ok(((c1, h, m), ampm)) = c
         .clone()
         .digits(1..=2)
@@ -78,8 +78,8 @@ fn parse_clock_v2(c: Cursor) -> Result<(Cursor, Clock), ParseError> {
 }
 
 fn main() {
-    let _ = parse_clock(cursor("12:23 AM"));
-    let _ = parse_clock_v2(cursor("01:59"));
+    let _ = parse_clock(cs::Cursor::from("12:23 AM"));
+    let _ = parse_clock_v2(cs::Cursor::from("01:59"));
 }
 
 #[cfg(test)]
@@ -88,7 +88,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_clock() -> Result<(), ParseError> {
+    fn test_parse_clock() -> Result<(), cs::ParseError> {
         use AmPm::*;
         use Clock::*;
         assert_eq!(parse_clock("11:35 AM X".into()).unwrap().1, H12(11, 35, AM));

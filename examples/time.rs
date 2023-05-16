@@ -14,11 +14,11 @@ impl Time {
 }
 
 impl FromStr for Time {
-    type Err = chainsaw::prelude::ParseError;
+    type Err = cs::ParseError;
 
     /// eg "09:23" or "23:59"
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_cur, hours, mins) = cursor(s)
+        let (_cur, hours, mins) = cs::Cursor::from(s)
             .digits(2..=2)
             .parse_selection::<u32>()? // chainsaw will use u32::FromStr
             .text(":")
@@ -48,7 +48,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_three_times() -> Result<(), ParseError> {
+    fn test_parse_three_times() -> Result<(), cs::ParseError> {
         let s = "09:23 11:45 23:59";
         let valid_chars: Vec<_> = "0123456789:".chars().collect();
         let valid_chars = valid_chars.as_slice();

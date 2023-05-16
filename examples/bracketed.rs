@@ -20,7 +20,7 @@ impl QuotedText {
 /// eg "'Hello World!', said Ferris"
 /// lexing and parsing together
 ///
-fn parse_quoted_text(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
+fn parse_quoted_text(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::ParseError> {
     // step 1: find out which quote char is used
     let (c, quote) = c.chars_in(1..=1, &['"', '\'']).parse_selection()?;
 

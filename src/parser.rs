@@ -7,6 +7,11 @@ pub trait Parser<'c, C, T> {
     fn parse(&mut self, s: C) -> Result<(C, T), Self::Error>;
 }
 
+
+
+
+
+
 pub type StrFunc<T, E> = for<'c> fn(&'c str) -> Result<(&'c str, T), E>;
 pub type StrMethod<T, X> = for<'c> fn(x: &'c X, &'c str) -> Result<(&'c str, T), ParseError>;
 
