@@ -414,6 +414,7 @@ pub trait Matchable<'a>: Sized {
     // type CursorWithSelection: Cursor<'a>;
 
     type TupleReturn<T>;
+    type DeTuple;
 
     fn maybe_detuple<T>(tup: (Self, T)) -> Self::TupleReturn<T>;
 
@@ -435,6 +436,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     fn validate(self) -> std::result::Result<Self, ParseError>;
+    fn validate_new(self) -> std::result::Result<Self::DeTuple, ParseError>;
 
     fn noop(self) -> Self {
         apply(self, |s| Some(s), "noop", "")
@@ -762,6 +764,7 @@ pub trait Matchable<'a>: Sized {
 
 impl<'a> Matchable<'a> for Option<&'a str> {
     type TupleReturn<T> = (Self, T);
+    type DeTuple = Self;
 
     #[inline]
     fn maybe_detuple<T>((s, t): (Self, T)) -> Self::TupleReturn<T> {
@@ -800,6 +803,13 @@ impl<'a> Matchable<'a> for Option<&'a str> {
 
     #[inline]
     fn validate(self) -> Result<Self, ParseError> {
+        match self.str() {
+            Ok(_s) => Ok(self),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
         match self.str() {
             Ok(_s) => Ok(self),
             Err(e) => Err(e),
@@ -869,6 +879,7 @@ impl<'a> Selectable<'a> for Cursor<'a> {
 
 impl<'a> Matchable<'a> for Cursor<'a> {
     type TupleReturn<S> = (Self, S);
+    type DeTuple = Self;
 
     fn maybe_detuple<S>((c, s): (Self, S)) -> Self::TupleReturn<S> {
         (c, s)
@@ -920,6 +931,10 @@ impl<'a> Matchable<'a> for Cursor<'a> {
             Some(e) => Err(e),
         }
     }
+
+    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
+        self.validate()
+    }
 }
 
 impl<'a, T> Selectable<'a> for (Cursor<'a>, T) {
@@ -936,141 +951,14 @@ impl<'a, T> Selectable<'a> for (Cursor<'a>, T) {
     }
 }
 
-impl<'a, T1, T2> Selectable<'a> for (Cursor<'a>, T1, T2) {
-    fn get_selection(&self) -> Result<&'a str, ParseError> {
-        self.0.get_selection()
-    }
-
-    fn selection_start(self) -> Self {
-        (self.0.selection_start(), self.1, self.2)
-    }
-
-    fn selection_end(self) -> Self {
-        (self.0.selection_end(), self.1, self.2)
-    }
-}
-
-impl<'a, T1, T2, T3> Selectable<'a> for (Cursor<'a>, T1, T2, T3) {
-    fn get_selection(&self) -> Result<&'a str, ParseError> {
-        self.0.get_selection()
-    }
-
-    fn selection_start(self) -> Self {
-        (self.0.selection_start(), self.1, self.2, self.3)
-    }
-
-    fn selection_end(self) -> Self {
-        (self.0.selection_end(), self.1, self.2, self.3)
-    }
-}
-
-impl<'a, T1, T2> Matchable<'a> for (Cursor<'a>, T1, T2) {
-    type TupleReturn<S> = (Cursor<'a>, T1, T2, S);
-
-    fn maybe_detuple<S>((tup, s): (Self, S)) -> Self::TupleReturn<S> {
-        let (c, t1, t2) = tup;
-        (c, t1, t2, s)
-    }
-
-    #[inline]
-    fn str(&self) -> Result<&'a str, ParseError> {
-        self.0.str()
-    }
-
-    #[inline]
-    fn set_str(self, s: &'a str) -> Self {
-        (self.0.set_str(s), self.1, self.2)
-    }
-
-    #[inline]
-    fn set_error(self, e: ParseError) -> Self {
-        (self.0.set_error(e), self.1, self.2)
-    }
-
-    // type CursorWithSelection = Self;
-    // type Cursor = Option<&'a str>;
-    // type Raw = &'a str;
-
-    // fn selection_start(self) -> Self {
-    //     SelectableStr {
-    //         cur: self.cur,
-    //         s:   self.cur,
-    //         e:   None,
-    //         err: self.err,
-    //     }
-    // }
-    #[inline]
-    fn validate(self) -> Result<Self, ParseError> {
-        self.0.validate().map(|c| (c, self.1, self.2))
-    }
-}
-
-impl<'a, T1, T2, T3> Matchable<'a> for (Cursor<'a>, T1, T2, T3) {
-    type TupleReturn<S> = (Cursor<'a>, T1, T2, T3, S);
-
-    fn maybe_detuple<S>((tup, s): (Self, S)) -> Self::TupleReturn<S> {
-        let (c, t1, t2, t3) = tup;
-        (c, t1, t2, t3, s)
-    }
-
-    #[inline]
-    fn str(&self) -> Result<&'a str, ParseError> {
-        self.0.str()
-    }
-
-    #[inline]
-    fn set_str(self, s: &'a str) -> Self {
-        (self.0.set_str(s), self.1, self.2, self.3)
-    }
-
-    #[inline]
-    fn set_error(self, e: ParseError) -> Self {
-        (self.0.set_error(e), self.1, self.2, self.3)
-    }
-
-    #[inline]
-    fn validate(self) -> Result<Self, ParseError> {
-        self.0.validate().map(|c| (c, self.1, self.2, self.3))
-    }
-}
-
-impl<'a, T1, T2, T3, T4> Matchable<'a> for (Cursor<'a>, T1, T2, T3, T4) {
-    type TupleReturn<S> = (Cursor<'a>, T1, T2, T3, T4, S);
-
-    fn maybe_detuple<S>((tup, s): (Self, S)) -> Self::TupleReturn<S> {
-        let (c, t1, t2, t3, t4) = tup;
-        (c, t1, t2, t3, t4, s)
-    }
-
-    #[inline]
-    fn str(&self) -> Result<&'a str, ParseError> {
-        self.0.str()
-    }
-
-    #[inline]
-    fn set_str(self, s: &'a str) -> Self {
-        (self.0.set_str(s), self.1, self.2, self.3, self.4)
-    }
-
-    #[inline]
-    fn set_error(self, e: ParseError) -> Self {
-        (self.0.set_error(e), self.1, self.2, self.3, self.4)
-    }
-
-    #[inline]
-    fn validate(self) -> Result<Self, ParseError> {
-        self.0
-            .validate()
-            .map(|c| (c, self.1, self.2, self.3, self.4))
-    }
-}
-
 impl<'a, T> Matchable<'a> for (Cursor<'a>, T) {
-    type TupleReturn<S> = (Cursor<'a>, T, S);
+    type DeTuple = Self;
+
+    type TupleReturn<S> = ((Cursor<'a>, T), S);
 
     fn maybe_detuple<S>((s, t): (Self, S)) -> Self::TupleReturn<S> {
         let (c, s) = s;
-        (c, s, t)
+        ((c, s), t)
     }
 
     #[inline]
@@ -1106,8 +994,74 @@ impl<'a, T> Matchable<'a> for (Cursor<'a>, T) {
         self.0.validate().map(|c| (c, self.1))
     }
 
-
+    #[inline]
+    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
+        self.0.validate().map(|c: Cursor<'a>| (c, self.1))
+    }
 }
+
+impl<'a, T1, T2> Matchable<'a> for ((Cursor<'a>, T1), T2) {
+    type TupleReturn<S> = (((Cursor<'a>, T1), T2), S);
+    type DeTuple = (Cursor<'a>, T1, T2);
+
+    fn maybe_detuple<S>((tup, s): (Self, S)) -> Self::TupleReturn<S> {
+        // let ((c, t1, t2) = tup;
+        // (c, t1, t2, s)
+        (tup, s)
+    }
+
+    #[inline]
+    fn str(&self) -> Result<&'a str, ParseError> {
+        self.0.str()
+    }
+
+    #[inline]
+    fn set_str(self, s: &'a str) -> Self {
+        (self.0.set_str(s), self.1)
+    }
+
+    #[inline]
+    fn set_error(self, e: ParseError) -> Self {
+        (self.0.set_error(e), self.1)
+    }
+
+    // type CursorWithSelection = Self;
+    // type Cursor = Option<&'a str>;
+    // type Raw = &'a str;
+
+    // fn selection_start(self) -> Self {
+    //     SelectableStr {
+    //         cur: self.cur,
+    //         s:   self.cur,
+    //         e:   None,
+    //         err: self.err,
+    //     }
+    // }
+    #[inline]
+    fn validate(self) -> Result<Self, ParseError> {
+        self.0.validate().map(|c| (c, self.1))
+    }
+
+    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
+        self.0.validate_new().map(|(c, t1)| (c, t1, self.1))
+    }
+}
+
+
+impl<'a, T1, T2> Selectable<'a> for ((Cursor<'a>, T1), T2) {
+    fn get_selection(&self) -> Result<&'a str, ParseError> {
+        self.0.get_selection()
+    }
+
+    fn selection_start(self) -> Self {
+        (self.0.selection_start(), self.1)
+    }
+
+    fn selection_end(self) -> Self {
+        (self.0.selection_end(), self.1)
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
@@ -1151,7 +1105,7 @@ mod tests {
             .select(|c| c.digits(2..=2).text(".").digits(3..=3))
             .parse_selection()
             .bind(&mut sss)
-            .validate()?;
+            .validate_new()?;
         Ok((c.str()?, Time(hh, mm, sss)))
     }
 
@@ -1173,7 +1127,7 @@ mod tests {
             .selection_end()
             .parse_selection()
             .bind(&mut sss)
-            .validate()?;
+            .validate_new()?;
         Ok((c.str()?, Time(hh, mm, sss)))
     }
 
@@ -1186,7 +1140,8 @@ mod tests {
             .parse_selection()?
             .text(":")
             .select(|c| c.digits(2..=2).text(".").digits(3..=3))
-            .parse_selection()?;
+            .parse_selection()?
+            .validate_new();
         Ok((c.str()?, Time(hh, mm, sss)))
     }
 
@@ -1201,7 +1156,8 @@ mod tests {
             .parse_selection()?
             .text(":")
             .select(|c| c.digits(2..=2).text(".").digits(3..=3))
-            .parse_selection()?;
+            .parse_selection()?
+            .validate_new();
         Ok((c, Time(hh, mm, sss)))
     }
 
@@ -1212,7 +1168,8 @@ mod tests {
             .parse_struct_str(|c| parse_time_v3(c))?
             .text("-")
             .ws()
-            .parse_struct_str(|c| parse_time_v3(c))?;
+            .parse_struct_str(|c| parse_time_v3(c))?
+            .validate_new()?;
         Ok((c.str()?, TimePeriod(time1, time2)))
     }
 
@@ -1225,6 +1182,8 @@ mod tests {
             .text("X")
             .digits(1..)
             .parse_selection::<i32>()
+            .unwrap()
+            .validate_new()
             .unwrap();
         assert_eq!(i, 42);
         assert_eq!(j, 45);
@@ -1236,7 +1195,7 @@ mod tests {
             .parse_selection::<String>()
             .unwrap()
             .ws()
-            .validate()
+            .validate_new()
             .unwrap();
         assert_eq!(s, String::from("cat"));
         assert_eq!(c.cur, Some(""));
@@ -1247,7 +1206,7 @@ mod tests {
             .parse_selection::<String>()
             .unwrap()
             .ws()
-            .validate()
+            .validate_new()
             .unwrap();
         assert_eq!(s, String::from("cat"));
         assert_eq!(c.cur, Some(""));
