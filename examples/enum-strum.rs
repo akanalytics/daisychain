@@ -19,7 +19,7 @@ enum FancyColor {
 }
 
 fn parse_fancy_enum(c: cs::Cursor) -> Result<(cs::Cursor, FancyColor), cs::ParseError> {
-    c.text_alt(FancyColor::VARIANTS).parse_selection()
+    c.text_alt(FancyColor::VARIANTS).parse_selection().validate()
 }
 
 fn main() {

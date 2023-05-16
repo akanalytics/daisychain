@@ -15,10 +15,10 @@ enum Clock {
 fn parse_clock(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
     let (c1, h, m) = c
         .digits(1..=2)
-        .parse_selection()?
+        .parse_selection()
         .text(":")
         .digits(2..=2)
-        .parse_selection()?
+        .parse_selection()
         .validate()?;
 
     // Cursor methods move out of the cursor they are called on.
@@ -35,6 +35,7 @@ fn parse_clock(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
         .ws()
         .text_alt(&["am", "AM", "pm", "PM"])
         .parse_selection_as_str()
+        .validate()
     {
         match ampm.to_lowercase().as_str() {
             "am" => return Ok((c2, Clock::H12(h, m, AmPm::AM))),
@@ -53,13 +54,13 @@ fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> 
     if let Ok((c1, h, m, ampm)) = c
         .clone()
         .digits(1..=2)
-        .parse_selection()?
+        .parse_selection()
         .text(":")
         .digits(2..=2)
-        .parse_selection()?
+        .parse_selection()
         .ws()
         .text_alt(&["am", "AM", "pm", "PM"])
-        .parse_selection_as_str()?
+        .parse_selection_as_str()
         .validate()
     {
         match ampm.to_lowercase().as_str() {
@@ -72,10 +73,10 @@ fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> 
     // parse the alternative representation using cursor at 'c'
     let (c2, h, m) = c
         .digits(2..=2) // mandate 2 digits
-        .parse_selection()?
+        .parse_selection()
         .text(":")
         .digits(2..=2)
-        .parse_selection()?
+        .parse_selection()
         .validate()?;
     Ok((c2, Clock::H24(h, m)))
 }

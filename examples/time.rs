@@ -20,11 +20,11 @@ impl FromStr for Time {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (_cur, hours, mins) = cs::Cursor::from(s)
             .digits(2..=2)
-            .parse_selection::<u32>()? // chainsaw will use u32::FromStr
+            .parse_selection::<u32>() // chainsaw will use u32::FromStr
             .text(":")
             .digits(2..=2)
-            .parse_selection()? // often no need to specify type explicitly
-            .text_eos()         // ensure we are at end-of-string
+            .parse_selection() // often no need to specify type explicitly
+            .text_eos() // ensure we are at end-of-string
             .validate()?;
         Ok(Time { hours, mins })
     }
@@ -55,13 +55,13 @@ mod tests {
 
         let (_c, t1, t2, t3) = cs::Cursor::from(s)
             .chars_in(.., valid_chars)
-            .parse_selection::<Time>()? // use the Time::FromStr we've just defined
+            .parse_selection::<Time>() // use the Time::FromStr we've just defined
             .ws()
             .chars_in(.., valid_chars)
-            .parse_selection::<Time>()?
+            .parse_selection::<Time>()
             .ws()
             .chars_in(.., valid_chars)
-            .parse_selection::<Time>()?
+            .parse_selection::<Time>()
             .validate()?;
         assert_eq!(t1, Time::new(9, 23));
         assert_eq!(t2, Time::new(11, 45));
