@@ -432,8 +432,8 @@ pub trait Matchable<'a>: Sized {
         self
     }
 
-    fn validate(self) -> std::result::Result<Self, ParseError>;
-    fn validate_new(self) -> std::result::Result<Self::DeTuple, ParseError>;
+    // fn validate(self) -> std::result::Result<Self, ParseError>;
+    fn validate(self) -> std::result::Result<Self::DeTuple, ParseError>;
 
     fn noop(self) -> Self {
         apply(self, |s| Some(s), "noop", "")
@@ -634,14 +634,15 @@ pub trait Matchable<'a>: Sized {
         P: FnMut(Self) -> Self,
         Self: Clone,
     {
-        let mut str = self;
+        let mut cur = self;
         for _i in 0..start_end(range).1.unwrap_or(i32::MAX) {
-            match (lexer)(str.clone()).validate() {
-                Ok(s) => str = s,
-                Err(..) => return str,
+            let c = (lexer)(cur.clone());
+            match c.str() {
+                Ok(..) => cur = c,
+                Err(..) => return cur,
             }
         }
-        str
+        cur
     }
 
     fn parse_struct_vec<P, T>(self, mut parser: P) -> Result<(Self,Vec<T>), ParseError>
@@ -798,15 +799,15 @@ impl<'a> Matchable<'a> for Option<&'a str> {
     //     }
     // }
 
-    #[inline]
-    fn validate(self) -> Result<Self, ParseError> {
-        match self.str() {
-            Ok(_s) => Ok(self),
-            Err(e) => Err(e),
-        }
-    }
+    // #[inline]
+    // fn validate(self) -> Result<Self, ParseError> {
+    //     match self.str() {
+    //         Ok(_s) => Ok(self),
+    //         Err(e) => Err(e),
+    //     }
+    // }
 
-    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
+    fn validate(self) -> Result<Self::DeTuple, ParseError> {
         match self.str() {
             Ok(_s) => Ok(self),
             Err(e) => Err(e),
@@ -903,16 +904,15 @@ impl<'a> Matchable<'a> for Cursor<'a> {
         }
     }
 
-    #[inline]
-    fn validate(self) -> Result<Self, ParseError> {
+    // #[inline]
+    // fn validate(self) -> Result<Self, ParseError> {
+    // }
+
+    fn validate(self) -> Result<Self::DeTuple, ParseError> {
         match self.err {
             None => Ok(self),
             Some(e) => Err(e),
         }
-    }
-
-    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
-        self.validate()
     }
 }
 
@@ -948,13 +948,13 @@ impl<'a, T> Matchable<'a> for (Cursor<'a>, T) {
         (self.0.set_error(e), self.1)
     }
 
-    #[inline]
-    fn validate(self) -> Result<Self, ParseError> {
-        self.0.validate().map(|c| (c, self.1))
-    }
+    // #[inline]
+    // fn validate(self) -> Result<Self, ParseError> {
+    //     self.0.validate().map(|c| (c, self.1))
+    // }
 
     #[inline]
-    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
+    fn validate(self) -> Result<Self::DeTuple, ParseError> {
         self.0.validate().map(|c: Cursor<'a>| (c, self.1))
     }
 }
@@ -977,13 +977,14 @@ impl<'a, T1, T2> Matchable<'a> for ((Cursor<'a>, T1), T2) {
         (self.0.set_error(e), self.1)
     }
 
-    #[inline]
-    fn validate(self) -> Result<Self, ParseError> {
-        self.0.validate().map(|c| (c, self.1))
-    }
+    // #[inline]
+    // fn validate(self) -> Result<Self, ParseError> {
+    //     self.0.validate().map(|c| (c, self.1))
+    // }
 
-    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
-        let r = self.0.validate_new()?;
+    #[inline]
+    fn validate(self) -> Result<Self::DeTuple, ParseError> {
+        let r = self.0.validate()?;
         Ok((r.0, r.1, self.1))
     }
 }
@@ -1006,13 +1007,14 @@ impl<'a, T1, T2, T3> Matchable<'a> for (((Cursor<'a>, T1), T2), T3) {
         (self.0.set_error(e), self.1)
     }
 
-    #[inline]
-    fn validate(self) -> Result<Self, ParseError> {
-        self.0.validate().map(|c| (c, self.1))
-    }
+    // #[inline]
+    // fn validate(self) -> Result<Self, ParseError> {
+    //     self.0.validate().map(|c| (c, self.1))
+    // }
 
-    fn validate_new(self) -> Result<Self::DeTuple, ParseError> {
-        let ct12 = self.0.validate_new()?;
+    #[inline]
+    fn validate(self) -> Result<Self::DeTuple, ParseError> {
+        let ct12 = self.0.validate()?;
         Ok((ct12.0, ct12.1,ct12.2, self.1))
     }
 }
@@ -1092,7 +1094,7 @@ mod tests {
             .select(|c| c.digits(2..=2).text(".").digits(3..=3))
             .parse_selection()
             .bind(&mut sss)
-            .validate_new()?;
+            .validate()?;
         Ok((c.str()?, Time(hh, mm, sss)))
     }
 
@@ -1114,7 +1116,7 @@ mod tests {
             .selection_end()
             .parse_selection()
             .bind(&mut sss)
-            .validate_new()?;
+            .validate()?;
         Ok((c.str()?, Time(hh, mm, sss)))
     }
 
@@ -1128,7 +1130,7 @@ mod tests {
             .text(":")
             .select(|c| c.digits(2..=2).text(".").digits(3..=3))
             .parse_selection()?
-            .validate_new()?;
+            .validate()?;
         Ok((c.str()?, Time(hh, mm, sss)))
     }
 
@@ -1144,7 +1146,7 @@ mod tests {
             .text(":")
             .select(|c| c.digits(2..=2).text(".").digits(3..=3))
             .parse_selection()?
-            .validate_new()?;
+            .validate()?;
         Ok((c, Time(hh, mm, sss)))
     }
 
@@ -1156,7 +1158,7 @@ mod tests {
             .text("-")
             .ws()
             .parse_struct_str(|c| parse_time_v3(c))?
-            .validate_new()?;
+            .validate()?;
         Ok((c.str()?, TimePeriod(time1, time2)))
     }
 
@@ -1170,7 +1172,7 @@ mod tests {
             .digits(1..)
             .parse_selection::<i32>()
             .unwrap()
-            .validate_new()
+            .validate()
             .unwrap();
         assert_eq!(i, 42);
         assert_eq!(j, 45);
@@ -1182,7 +1184,7 @@ mod tests {
             .parse_selection::<String>()
             .unwrap()
             .ws()
-            .validate_new()
+            .validate()
             .unwrap();
         assert_eq!(s, String::from("cat"));
         assert_eq!(c.cur, Some(""));
@@ -1193,7 +1195,7 @@ mod tests {
             .parse_selection::<String>()
             .unwrap()
             .ws()
-            .validate_new()
+            .validate()
             .unwrap();
         assert_eq!(s, String::from("cat"));
         assert_eq!(c.cur, Some(""));
@@ -1285,11 +1287,11 @@ mod tests {
                     c.parse_struct_str(|c| parse_time_v3(c))?
                         .maybe(",")
                         .ws()
-                        .validate_new()
+                        .validate()
                 })?
                 .ws()
                 .text("}")
-                .validate_new()?;
+                .validate()?;
             Ok((c.str()?, vec))
         }
         let res = parse_str_time_array("{01:02:03.345, 02:02:03.346, 23:02:03.347}").unwrap();
@@ -1307,7 +1309,7 @@ mod tests {
                 .parse_struct_vec(|c| parse_time_v4(c)?.maybe(",").ws().validate())?
                 .ws()
                 .text("}")
-                .validate_new()?;
+                .validate()?;
             Ok((c, vec))
         }
         let res = parse_time_array(cursor("{01:02:03.345, 02:02:03.346, 23:02:03.347}")).unwrap();

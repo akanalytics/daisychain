@@ -19,7 +19,7 @@ fn parse_clock(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
         .text(":")
         .digits(2..=2)
         .parse_selection()?
-        .validate_new()?;
+        .validate()?;
 
     // Cursor methods move out of the cursor they are called on.
     // Because we might return the cursor 'c' if parsing AM/PM doesnt succeed,
@@ -60,7 +60,7 @@ fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> 
         .ws()
         .text_alt(&["am", "AM", "pm", "PM"])
         .parse_selection_as_str()?
-        .validate_new()
+        .validate()
     {
         match ampm.to_lowercase().as_str() {
             "am" => return Ok((c1, Clock::H12(h, m, AmPm::AM))),
@@ -76,7 +76,7 @@ fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> 
         .text(":")
         .digits(2..=2)
         .parse_selection()?
-        .validate_new()?;
+        .validate()?;
     Ok((c2, Clock::H24(h, m)))
 }
 

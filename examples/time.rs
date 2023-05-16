@@ -25,7 +25,7 @@ impl FromStr for Time {
             .digits(2..=2)
             .parse_selection()? // often no need to specify type explicitly
             .text_eos()         // ensure we are at end-of-string
-            .validate_new()?;
+            .validate()?;
         Ok(Time { hours, mins })
     }
 }
@@ -62,7 +62,7 @@ mod tests {
             .ws()
             .chars_in(.., valid_chars)
             .parse_selection::<Time>()?
-            .validate_new()?;
+            .validate()?;
         assert_eq!(t1, Time::new(9, 23));
         assert_eq!(t2, Time::new(11, 45));
         assert_eq!(t3, Time::new(23, 59));
