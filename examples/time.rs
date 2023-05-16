@@ -25,7 +25,7 @@ impl FromStr for Time {
             .digits(2..=2)
             .parse_selection()? // often no need to specify type explicitly
             .text_eos()         // ensure we are at end-of-string
-            .validate()?;
+            .validate_new()?;
         Ok(Time { hours, mins })
     }
 }
@@ -53,7 +53,7 @@ mod tests {
         let valid_chars: Vec<_> = "0123456789:".chars().collect();
         let valid_chars = valid_chars.as_slice();
 
-        let (_c, t1, t2, t3) = cursor(s)
+        let (_c, t1, t2, t3) = cs::Cursor::from(s)
             .chars_in(.., valid_chars)
             .parse_selection::<Time>()? // use the Time::FromStr we've just defined
             .ws()
@@ -62,7 +62,7 @@ mod tests {
             .ws()
             .chars_in(.., valid_chars)
             .parse_selection::<Time>()?
-            .validate()?;
+            .validate_new()?;
         assert_eq!(t1, Time::new(9, 23));
         assert_eq!(t2, Time::new(11, 45));
         assert_eq!(t3, Time::new(23, 59));

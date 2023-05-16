@@ -32,7 +32,7 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_enum() -> Result<(), ParseError> {
+    fn test_parse_enum() -> Result<(), cs::ParseError> {
         let (c, color) = parse_fancy_enum("Burgundy Arrow".into())?;
         assert_eq!(color, FancyColor::Burgundy);
         assert_eq!(c.str()?, " Arrow");

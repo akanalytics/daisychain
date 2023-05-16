@@ -41,9 +41,9 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_quoted_text() -> Result<(), ParseError> {
+    fn test_parse_quoted_text() -> Result<(), cs::ParseError> {
         let s = "'Hello World!', said Ferris";
-        let (c, qt) = parse_quoted_text(Cursor::from(s))?;
+        let (c, qt) = parse_quoted_text(cs::Cursor::from(s))?;
         assert_eq!(qt, QuotedText::new('\'', "Hello World!"));
         assert_eq!(c.str()?, ", said Ferris");
 

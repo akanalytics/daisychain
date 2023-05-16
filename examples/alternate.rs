@@ -18,7 +18,8 @@ fn parse_clock(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
         .parse_selection()?
         .text(":")
         .digits(2..=2)
-        .parse_selection()?;
+        .parse_selection()?
+        .validate_new()?;
 
     // Cursor methods move out of the cursor they are called on.
     // Because we might return the cursor 'c' if parsing AM/PM doesnt succeed,
@@ -49,7 +50,7 @@ fn parse_clock(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
 
 // improved version disallows "1:59" as 24H, and insists on "01:59"
 fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
-    if let Ok(((c1, h, m), ampm)) = c
+    if let Ok((c1, h, m, ampm)) = c
         .clone()
         .digits(1..=2)
         .parse_selection()?
@@ -58,7 +59,8 @@ fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> 
         .parse_selection()?
         .ws()
         .text_alt(&["am", "AM", "pm", "PM"])
-        .parse_selection_as_str()
+        .parse_selection_as_str()?
+        .validate_new()
     {
         match ampm.to_lowercase().as_str() {
             "am" => return Ok((c1, Clock::H12(h, m, AmPm::AM))),
@@ -73,7 +75,8 @@ fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> 
         .parse_selection()?
         .text(":")
         .digits(2..=2)
-        .parse_selection()?;
+        .parse_selection()?
+        .validate_new()?;
     Ok((c2, Clock::H24(h, m)))
 }
 
@@ -84,8 +87,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use test_log::test;
     use super::*;
+    use test_log::test;
 
     #[test]
     fn test_parse_clock() -> Result<(), cs::ParseError> {
