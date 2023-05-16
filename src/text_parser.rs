@@ -498,7 +498,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    fn text_eos(self) -> Self {
+    fn end_of_stream(self) -> Self {
         apply(
             self,
             |s| if s.is_empty() { Some(s) } else { None },
@@ -508,7 +508,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     #[allow(clippy::wrong_self_convention)]
-    fn text_eol(self) -> Self {
+    fn end_of_line(self) -> Self {
         #[allow(clippy::unnecessary_lazy_evaluations)]
         apply(
             self,

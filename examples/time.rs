@@ -24,7 +24,7 @@ impl FromStr for Time {
             .text(":")
             .digits(2..=2)
             .parse_selection() // often no need to specify type explicitly
-            .text_eos() // ensure we are at end-of-string
+            .end_of_stream() // ensure we are at end-of-string
             .validate()?;
         Ok(Time { hours, mins })
     }

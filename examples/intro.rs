@@ -41,17 +41,17 @@ mod tests {
         assert_eq!(None.hws(), None);
 
         // match end-of-string/end-of-stream
-        assert_eq!(Some("Hello").text_eos(), None);
-        assert_eq!(Some("").text_eos(), Some(""));
-        assert_eq!(None.text_eos(), None);
+        assert_eq!(Some("Hello").end_of_stream(), None);
+        assert_eq!(Some("").end_of_stream(), Some(""));
+        assert_eq!(None.end_of_stream(), None);
 
         // match end-of-line (end-of-stream is treated as eol too!)
-        assert_eq!(Some("Hello").text_eol(), None);
-        assert_eq!(Some("\nHello").text_eol(), Some("Hello"));
-        assert_eq!(Some("\n\nHello").text_eol(), Some("\nHello"));
-        assert_eq!(Some("\r\nHello").text_eol(), Some("Hello"));
-        assert_eq!(Some("").text_eol(), Some(""));
-        assert_eq!(None.text_eol(), None);
+        assert_eq!(Some("Hello").end_of_line(), None);
+        assert_eq!(Some("\nHello").end_of_line(), Some("Hello"));
+        assert_eq!(Some("\n\nHello").end_of_line(), Some("\nHello"));
+        assert_eq!(Some("\r\nHello").end_of_line(), Some("Hello"));
+        assert_eq!(Some("").end_of_line(), Some(""));
+        assert_eq!(None.end_of_line(), None);
 
         // match by character
         let chars: Vec<_> = "Hle".chars().collect();
