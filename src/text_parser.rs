@@ -21,41 +21,6 @@ fn cursorify<'a, T>(
     move |c: Cursor<'a>| (f)(c.str()?).map(|(s, t)| (cursor(s), t))
 }
 
-pub trait Parser<'a, T> {
-    fn parse(&mut self, s: Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError>;
-}
-
-impl<'p, T> Parser<'p, T> for for<'b> fn(&'b str) -> Result<(&'b str, T), ParseError> {
-    fn parse(&mut self, c: Cursor<'p>) -> Result<(Cursor<'p>, T), ParseError> {
-        trace!("#### fn(&'b str): {s}", s = c.cur.unwrap_or("-"));
-        let (s, t) = (self)(c.str()?)?;
-        Ok((cursor(s), t))
-    }
-}
-
-impl<'a, T, F> Parser<'a, T> for F
-where
-    F: FnMut(Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError>,
-{
-    fn parse(&mut self, s: Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError> {
-        trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
-        (self)(s)
-    }
-}
-
-impl<'a, T, X> Parser<'a, T>
-    for (
-        &'a X,
-        for<'b> fn(context: &'b X, &'b str) -> Result<(&'b str, T), ParseError>,
-    )
-{
-    fn parse(&mut self, c: Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError> {
-        trace!("#### fn(context, &str): {s}", s = c.cur.unwrap_or("-"));
-        let (s, t) = (self.1)(self.0, c.str()?)?;
-        Ok((cursor(s), t))
-    }
-}
-
 // pub trait ParserArg<'a> {
 //     type ConvertFrom;
 //     fn from_cursor(c: Self::ConvertFrom) -> Self;
@@ -90,10 +55,10 @@ impl<'a, T, X> Parser<'a, T>
 
 #[derive(Debug, Clone)]
 pub struct Cursor<'a> {
-    selection: Selection<'a>,
-    cur: Option<&'a str>,
-    err: Option<ParseError>,
-    context: &'a str,
+    pub selection: Selection<'a>,
+    pub cur: Option<&'a str>,
+    pub err: Option<ParseError>,
+    pub context: &'a str,
 }
 
 // equal and error free
@@ -194,7 +159,7 @@ where
     if let Some((i, _t)) = s.match_indices(pred).nth(0) {
         // trace!(">>>> {action} matched on i={i} t={t} from s={s} s = {start} e = {end}");
 
-        if i >= start && i <= end+1 {
+        if i >= start && i <= end + 1 {
             trace!(
                 "{label:<20} {action:<10}('{inp}') => '{out}'",
                 label = LABEL.with(|f| f.get()),
@@ -205,7 +170,7 @@ where
         }
     } else {
         let len = s.chars().count();
-        if  len >= start && len <= end {
+        if len >= start && len <= end {
             trace!(
                 "{label:<20} {action:<10}('{inp}') => exhausted",
                 label = LABEL.with(|f| f.get()),
@@ -213,7 +178,6 @@ where
                 // out = util::formatter_str("")
             );
             return cur.set_str("");
-
         }
     }
     // not found
@@ -744,7 +708,7 @@ pub trait Matchable<'a>: Sized {
         Ok(Self::maybe_detuple((cur, t)))
     }
 
-    fn parse_struct<C, P, T>(self, mut parser: P) -> Result<Self::TupleReturn<T>, ParseError>
+    fn parse_with<C, P, T>(self, mut parser: P) -> Result<Self::TupleReturn<T>, ParseError>
     where
         P: FnMut(Self) -> std::result::Result<(Self, T), ParseError>,
     {
@@ -753,17 +717,17 @@ pub trait Matchable<'a>: Sized {
         Ok(Self::maybe_detuple((s, t)))
     }
 
-    fn parse_with<P, F, T>(self, mut parser: P, save_func: F) -> Result<Self, ParseError>
-    where
-        P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
-        F: FnOnce(T),
-    {
-        let s: &str = self.str()?;
-        let outcome = (parser)(s)?;
-        let (_s, t): (&str, T) = outcome;
-        save_func(t);
-        Ok(self)
-    }
+    // fn parse_with<P, F, T>(self, mut parser: P, save_func: F) -> Result<Self, ParseError>
+    // where
+    //     P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
+    //     F: FnOnce(T),
+    // {
+    //     let s: &str = self.str()?;
+    //     let outcome = (parser)(s)?;
+    //     let (_s, t): (&str, T) = outcome;
+    //     save_func(t);
+    //     Ok(self)
+    // }
 
     fn parse_put<P, T>(self, mut parser: P, dest: &mut T) -> Result<Self, ParseError>
     where
@@ -1141,6 +1105,8 @@ impl<'a, T> Matchable<'a> for (Cursor<'a>, T) {
     fn validate(self) -> Result<Self, ParseError> {
         self.0.validate().map(|c| (c, self.1))
     }
+
+
 }
 
 #[cfg(test)]
@@ -1148,7 +1114,7 @@ mod tests {
 
     use std::ops::RangeBounds;
 
-    use crate::text_parser::{cursor, Bind, ParseError, Parser, Selectable};
+    use crate::text_parser::{cursor, Bind, ParseError, Selectable};
 
     use super::{Cursor, Matchable};
     use test_log::test;
@@ -1285,78 +1251,6 @@ mod tests {
             .unwrap();
         assert_eq!(s, String::from("cat"));
         assert_eq!(c.cur, Some(""));
-    }
-
-    #[test]
-    fn test_examples() {
-        // impl<'p, T> Parser<'a, T, SelectableStr<'p>> for for<'a> fn(SelectableStr<'a>) -> Result<(SelectableStr<'a>,T), BadMatch> {
-        //     fn parse(&self, _s: SelectableStr<'p>) -> Result<(SelectableStr<'p>, T), BadMatch> {
-        //         todo!()
-        //     }
-        // }
-
-        fn lp<'a, T>(s: Cursor<'a>, mut p: impl Parser<'a, T>) {
-            let _ = p.parse(s);
-        }
-
-        #[derive(Default)]
-        struct StructEx;
-        impl StructEx {
-            fn parse_ex2<'a>(&self, s: &'a str) -> Result<(&'a str, String), ParseError> {
-                Ok((s, String::from("Example2")))
-            }
-            fn parse_ex4<'a>(&self, s: Cursor<'a>) -> Result<(Cursor<'a>, String), ParseError> {
-                Ok((s, String::from("Example4")))
-            }
-        }
-
-        fn parse_ex1(s: &str) -> Result<(&str, String), ParseError> {
-            Ok((s, String::from("Example1")))
-        }
-
-        fn parse_ex3(s: Cursor) -> Result<(Cursor, String), ParseError> {
-            Ok((s, String::from("Example3")))
-        }
-
-        type StrFunc<T> = for<'a> fn(&'a str) -> Result<(&'a str, T), ParseError>;
-        type StrMethod<X, T> = for<'a> fn(x: &'a X, &'a str) -> Result<(&'a str, T), ParseError>;
-        type CurFunc<T> = for<'a> fn(Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError>;
-
-        // fn cursorify<'a, T>(
-        //      f: &'a mut impl FnMut(&'a str) -> Result<(&'a str, T), BadMatch>,
-        // ) -> impl FnMut(SelectableStr<'a>) -> Result<(SelectableStr<'a>, T), BadMatch>   {
-        //     |c: SelectableStr<'a>| { (f)(c.str()?).map(|(s,t)| (cursor(s),t) ) }
-        // }
-
-        let selfie = StructEx;
-
-        let (_c, _vec) = cursor("")
-            .parse_struct_vec(|c| c.ws().parse_selection::<i32>())
-            .unwrap();
-
-        // let (_c, _vec) = cursor("11:20:24.123")
-        //     .parse_struct_vec(cursorify(|c| parse_time_v2(c)))
-        //     .unwrap();
-
-        // let (_c, _vec) = cursor("")
-        //     .parse_struct_vec(cursorify(|c| selfie.parse_ex2(c)))
-        //     .unwrap();
-
-        let _f: StrMethod<StructEx, String> = StructEx::parse_ex2;
-        let f: for<'a> fn(&'a str) -> Result<(&'a str, String), ParseError> = parse_ex1;
-        let tup = (&selfie, StructEx::parse_ex2 as StrMethod<_, _>);
-        lp(cursor("parse_ex1 as ...     "), f);
-        lp(cursor("parse_ex1 as StrFunc "), parse_ex1 as StrFunc<_>);
-        lp(cursor("(&selfie,f)          "), tup);
-        lp(cursor("|c| self.parse_ex4(c)"), |c| selfie.parse_ex4(c));
-        lp(cursor("parse_ex3            "), parse_ex3);
-        lp(cursor("|c| parse_ex(c)      "), |c| parse_ex3(c));
-        lp(cursor("11:20:24.123         "), |c| parse_time_v4(c));
-        lp(cursor("11:21:24.123         "), parse_time_v4);
-
-        // https://internals.rust-lang.org/t/extending-implicit-coercion-of-function-items-to-function-pointers-during-trait-resolution/17093
-        lp(cursor("11:22:24.123         "), parse_time_v3 as StrFunc<_>);
-        lp(cursor("11:23:24.123         "), parse_time_v2 as StrFunc<_>);
     }
 
     #[test]

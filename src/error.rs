@@ -1,4 +1,14 @@
-use std::{error::Error, fmt};
+use std::{error::Error, fmt, matches};
+
+
+/// Indicates whether an error can be recovered from, and parsing can continue.
+/// Errors such as "config file not found" in parse functions are likely fatal and 
+/// should be flagged non-recoverable
+pub trait Recoverable {
+    fn is_recoverable(&self) -> bool;
+}
+
+
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -8,6 +18,12 @@ pub enum ParseError {
         args: &'static str,
     },
 }
+impl Recoverable for ParseError {
+    fn is_recoverable(&self) -> bool {
+        matches!(self, Self::NoMatch{..})
+    }
+} 
+
 
 impl Clone for ParseError {
     #[inline]

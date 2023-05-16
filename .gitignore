@@ -23,6 +23,7 @@ logfile.txt
 *.pyc
 
 # intellij + vscode stuff
+/.vscode
 .idea
 modules.xml
 odonata.iml
