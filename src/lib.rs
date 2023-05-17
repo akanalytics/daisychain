@@ -7,6 +7,7 @@
 #![warn(clippy::perf)]
 #![allow(mixed_script_confusables)]
 
+mod contrib;
 mod parser;
 mod error;
 mod selection;
