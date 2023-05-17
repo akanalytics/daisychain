@@ -33,7 +33,6 @@ fn parse_quoted_text(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::Pars
     Ok((c, QuotedText { quote, text }))
 }
 
-fn main() {}
 
 #[cfg(test)]
 mod tests {

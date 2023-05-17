@@ -29,9 +29,6 @@ fn parse_enum(c: cs::Cursor) -> Result<(cs::Cursor, Color), cs::ParseError> {
     c.text_alt(&["Red", "Blue", "Green"]).parse_selection().validate()
 }
 
-fn main() {
-    let _ = parse_enum("Red".into());
-}
 
 #[cfg(test)]
 mod tests {

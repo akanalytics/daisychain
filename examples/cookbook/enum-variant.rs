@@ -7,7 +7,10 @@ enum Number {
     Decimal(u32),
 }
 
-/// uses the FromStr trait impl above
+
+
+/// the idea is to use `if let` to try and parse the enum variants in succession.
+/// 
 fn parse_number(c: cs::Cursor) -> Result<(cs::Cursor, Number), cs::ParseError> {
 
     // try first variant (using clone to save the initial cursor position)
@@ -44,9 +47,6 @@ fn parse_number(c: cs::Cursor) -> Result<(cs::Cursor, Number), cs::ParseError> {
     })
 }
 
-fn main() {
-    let _ = parse_number("0x2f".into());
-}
 
 #[cfg(test)]
 mod tests {

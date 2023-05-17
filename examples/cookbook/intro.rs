@@ -14,9 +14,6 @@ use chainsaw::prelude::*;
 /// test-log = {version = "0.2"}
 /// 
 
-fn main() {
-    let _ = Some(" Hello").ws().text("He");
-}
 
 #[cfg(test)]
 mod tests {

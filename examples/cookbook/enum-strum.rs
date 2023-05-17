@@ -22,9 +22,6 @@ fn parse_fancy_enum(c: cs::Cursor) -> Result<(cs::Cursor, FancyColor), cs::Parse
     c.text_alt(FancyColor::VARIANTS).parse_selection().validate()
 }
 
-fn main() {
-    let _ = parse_fancy_enum("Burgundy".into());
-}
 
 #[cfg(test)]
 mod tests {

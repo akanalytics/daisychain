@@ -81,10 +81,6 @@ fn parse_clock_v2(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> 
     Ok((c2, Clock::H24(h, m)))
 }
 
-fn main() {
-    let _ = parse_clock(cs::Cursor::from("12:23 AM"));
-    let _ = parse_clock_v2(cs::Cursor::from("01:59"));
-}
 
 #[cfg(test)]
 mod tests {

@@ -30,9 +30,6 @@ impl FromStr for Time {
     }
 }
 
-fn main() {
-    let _ = Time::new(0, 0);
-}
 
 #[cfg(test)]
 mod tests {
