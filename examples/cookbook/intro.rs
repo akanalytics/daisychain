@@ -20,6 +20,8 @@ mod tests {
     use test_log::test;
 
     ///
+    /// 
+    /// 
     /// Option<&str> is a simple cursor, offering matching functions but no
     /// selection. Handy for unit testing.
     /// None indicates that no match mas made

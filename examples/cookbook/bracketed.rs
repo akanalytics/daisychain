@@ -34,14 +34,14 @@ fn parse_quoted_text(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::Pars
     Ok((c, QuotedText { quote, text }))
 }
 
-/// alternative implmentation using "bind"
+/// alternative implementation using "bind"
 /// 
 fn parse_quoted_text_v2(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::ParseError> {
-    let mut quote = ' ';
+    let mut quote = char::default();
     let (c, text) = c
         .chars_in(1..=1, &['"', '\''])
         .parse_selection()
-        .bind(&mut quote) // store the quote found, to use later in the matching method-chain
+        .bind(&mut quote) // store the quote found, to use below in the matching method-chain
         .chars_not_in(0.., &[quote])
         .parse_selection()
         .chars_in(1..=1, &[quote])
