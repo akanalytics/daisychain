@@ -57,7 +57,7 @@ impl<'c, T, X> Parser<'c, Cursor<'c>, T> for (
 
 #[cfg(test)]
 mod tests {
-    use crate::{prelude::{Cursor, ParseError, Parser}, parser::{StrFunc, StrMethod}};
+    use crate::{prelude::{Cursor, ParseError}, parser::{StrFunc, StrMethod, Parser}};
 
     #[test]
     fn test_casting() {

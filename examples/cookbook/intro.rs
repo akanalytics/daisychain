@@ -1,4 +1,3 @@
-use chainsaw::prelude::*;
 
 /// running examples
 ///
@@ -14,9 +13,6 @@ use chainsaw::prelude::*;
 /// test-log = {version = "0.2"}
 /// 
 
-fn main() {
-    let _ = Some(" Hello").ws().text("He");
-}
 
 #[cfg(test)]
 mod tests {
@@ -24,6 +20,8 @@ mod tests {
     use test_log::test;
 
     ///
+    /// 
+    /// 
     /// Option<&str> is a simple cursor, offering matching functions but no
     /// selection. Handy for unit testing.
     /// None indicates that no match mas made
@@ -41,17 +39,17 @@ mod tests {
         assert_eq!(None.hws(), None);
 
         // match end-of-string/end-of-stream
-        assert_eq!(Some("Hello").text_eos(), None);
-        assert_eq!(Some("").text_eos(), Some(""));
-        assert_eq!(None.text_eos(), None);
+        assert_eq!(Some("Hello").end_of_stream(), None);
+        assert_eq!(Some("").end_of_stream(), Some(""));
+        assert_eq!(None.end_of_stream(), None);
 
         // match end-of-line (end-of-stream is treated as eol too!)
-        assert_eq!(Some("Hello").text_eol(), None);
-        assert_eq!(Some("\nHello").text_eol(), Some("Hello"));
-        assert_eq!(Some("\n\nHello").text_eol(), Some("\nHello"));
-        assert_eq!(Some("\r\nHello").text_eol(), Some("Hello"));
-        assert_eq!(Some("").text_eol(), Some(""));
-        assert_eq!(None.text_eol(), None);
+        assert_eq!(Some("Hello").end_of_line(), None);
+        assert_eq!(Some("\nHello").end_of_line(), Some("Hello"));
+        assert_eq!(Some("\n\nHello").end_of_line(), Some("\nHello"));
+        assert_eq!(Some("\r\nHello").end_of_line(), Some("Hello"));
+        assert_eq!(Some("").end_of_line(), Some(""));
+        assert_eq!(None.end_of_line(), None);
 
         // match by character
         let chars: Vec<_> = "Hle".chars().collect();
@@ -61,6 +59,9 @@ mod tests {
             Some("Hello").chars_match(1.., |c| c.is_uppercase()),
             Some("ello")
         );
+
+        assert_eq!(Some("Hello").chars_in(1.., &['H', 'e']), Some("llo"));
+
 
         // text - match a word
         // text-alt match one of series of words

@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use chainsaw::prelude::*;
 
 #[derive(PartialEq, Debug)]
@@ -22,18 +20,34 @@ impl QuotedText {
 ///
 fn parse_quoted_text(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::ParseError> {
     // step 1: find out which quote char is used
-    let (c, quote) = c.chars_in(1..=1, &['"', '\'']).parse_selection()?;
+    let (c, quote) = c
+        .chars_in(1..=1, &['"', '\''])
+        .parse_selection()
+        .validate()?;
 
     // step 2: use the quote character to extract the text between quotes
     let (c, text) = c
         .chars_not_in(0.., &[quote])
-        .parse_selection()?
+        .parse_selection()
         .chars_in(1..=1, &[quote])
         .validate()?;
     Ok((c, QuotedText { quote, text }))
 }
 
-fn main() {}
+/// alternative implementation using "bind"
+/// 
+fn parse_quoted_text_v2(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::ParseError> {
+    let mut quote = char::default();
+    let (c, text) = c
+        .chars_in(1..=1, &['"', '\''])
+        .parse_selection()
+        .bind(&mut quote) // store the quote found, to use below in the matching method-chain
+        .chars_not_in(0.., &[quote])
+        .parse_selection()
+        .chars_in(1..=1, &[quote])
+        .validate()?;
+    Ok((c, QuotedText { quote, text }))
+}
 
 #[cfg(test)]
 mod tests {
@@ -41,13 +55,17 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_quoted_text() -> Result<(), ParseError> {
+    fn test_parse_quoted_text() -> Result<(), cs::ParseError> {
         let s = "'Hello World!', said Ferris";
-        let (c, qt) = parse_quoted_text(Cursor::from(s))?;
+        let (c, qt) = parse_quoted_text(cs::Cursor::from(s))?;
         assert_eq!(qt, QuotedText::new('\'', "Hello World!"));
         assert_eq!(c.str()?, ", said Ferris");
 
         let (cursor, qt) = parse_quoted_text("\"Hi\", he said".into())?;
+        assert_eq!(qt, QuotedText::new('"', "Hi"));
+        assert_eq!(cursor.str()?, ", he said");
+
+        let (cursor, qt) = parse_quoted_text_v2("\"Hi\", he said".into())?;
         assert_eq!(qt, QuotedText::new('"', "Hi"));
         assert_eq!(cursor.str()?, ", he said");
 

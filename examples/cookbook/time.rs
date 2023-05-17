@@ -2,9 +2,9 @@ use chainsaw::prelude::*;
 use std::str::FromStr;
 
 #[derive(PartialEq, Debug)]
-struct Time {
-    hours: u32,
-    mins: u32,
+pub struct Time {
+    pub hours: u32,
+    pub mins: u32,
 }
 
 impl Time {
@@ -20,19 +20,16 @@ impl FromStr for Time {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (_cur, hours, mins) = cs::Cursor::from(s)
             .digits(2..=2)
-            .parse_selection::<u32>()? // chainsaw will use u32::FromStr
+            .parse_selection::<u32>() // chainsaw will use u32::FromStr
             .text(":")
             .digits(2..=2)
-            .parse_selection()? // often no need to specify type explicitly
-            .text_eos()         // ensure we are at end-of-string
+            .parse_selection() // often no need to specify type explicitly
+            .end_of_stream() // ensure we are at end-of-string
             .validate()?;
         Ok(Time { hours, mins })
     }
 }
 
-fn main() {
-    let _ = Time::new(0, 0);
-}
 
 #[cfg(test)]
 mod tests {
@@ -53,15 +50,15 @@ mod tests {
         let valid_chars: Vec<_> = "0123456789:".chars().collect();
         let valid_chars = valid_chars.as_slice();
 
-        let (_c, t1, t2, t3) = cursor(s)
-            .chars_in(.., valid_chars)
-            .parse_selection::<Time>()? // use the Time::FromStr we've just defined
+        let (_c, t1, t2, t3) = cs::Cursor::from(s)
+            .chars_in(1.., valid_chars)
+            .parse_selection::<Time>() // use the Time::FromStr we've just defined
             .ws()
-            .chars_in(.., valid_chars)
-            .parse_selection::<Time>()?
+            .chars_in(1.., valid_chars)
+            .parse_selection::<Time>()
             .ws()
-            .chars_in(.., valid_chars)
-            .parse_selection::<Time>()?
+            .chars_in(1.., valid_chars)
+            .parse_selection::<Time>()
             .validate()?;
         assert_eq!(t1, Time::new(9, 23));
         assert_eq!(t2, Time::new(11, 45));
