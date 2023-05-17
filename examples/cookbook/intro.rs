@@ -1,4 +1,3 @@
-use chainsaw::prelude::*;
 
 /// running examples
 ///
