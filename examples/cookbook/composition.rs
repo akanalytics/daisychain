@@ -1,8 +1,7 @@
 use std::str::FromStr;
 
 use kateno::prelude::{
-    {Cursor, ParseError},
-    *,
+    *, {Cursor, ParseError},
 };
 
 use crate::{alternate::parse_clock, time::Time};
@@ -53,6 +52,10 @@ struct TrainTime {
     dep: Time,
 }
 
+///
+/// parse_with expects a closure/function that matches
+///  fn(Cursor) -> Result<(Cursor,T), ParseError>
+///
 fn parse_traintime(c: Cursor) -> Result<(Cursor, TrainTime), ParseError> {
     let (c, city, arr, dep) = c
         .word()
@@ -60,11 +63,11 @@ fn parse_traintime(c: Cursor) -> Result<(Cursor, TrainTime), ParseError> {
         .ws()
         .text("Arrive")
         .ws()
-        .parse_with(parse_clock)
+        .parse_with(parse_clock) // free function accepted
         .ws()
         .text("Depart")
         .ws()
-        .parse_with(parse_clock)
+        .parse_with(|c| parse_clock(c)) // closure accepted
         .validate()?;
     Ok((c, TrainTime { city, arr, dep }))
 }
@@ -81,6 +84,29 @@ fn parse_timetable(s: &str) -> Result<Vec<TrainTime>, ParseError> {
         vec.push(tt);
     }
     Ok(vec)
+}
+
+
+
+fn parse_str_clock(s: &str) -> Result<(&str, Time), ParseError> {
+    let (c, time) = Cursor::from(s).parse_with(parse_clock).validate()?;
+    Ok((c.str()?, time))
+}
+
+fn parse_str_traintime(c: &str) -> Result<(&str, TrainTime), ParseError> {
+    let (c, city, arr, dep) = Cursor::from(c)
+        .word()
+        .parse_selection()
+        .ws()
+        .text("Arrive")
+        .ws()
+        .parse_with_str(parse_str_clock) // free function accepted
+        .ws()
+        .text("Depart")
+        .ws()
+        .parse_with_str(|c| parse_str_clock(c)) // closure accepted
+        .validate()?;
+    Ok((c.str()?, TrainTime { city, arr, dep }))
 }
 
 #[cfg(test)]
