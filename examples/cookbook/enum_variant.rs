@@ -7,15 +7,13 @@ enum Number {
     Decimal(u32),
 }
 
-
-
 /// the idea is to use `if let` to try and parse the enum variants in succession.
-/// 
+///
 fn parse_number(c: cs::Cursor) -> Result<(cs::Cursor, Number), cs::ParseError> {
-
     // try first variant (using clone to save the initial cursor position)
     if let Ok((c, s)) = c
         .clone()
+        .debug_context("binary")
         .text("0b")
         .chars_in(1.., &['0', '1'])
         .parse_selection_as_str()
@@ -28,6 +26,7 @@ fn parse_number(c: cs::Cursor) -> Result<(cs::Cursor, Number), cs::ParseError> {
     let hex_chars = b"0123456789ABCDEF".map(|c| c as char);
     if let Ok((c, hex)) = c
         .clone()
+        .debug_context("hex")
         .text("0x")
         .chars_in(1.., hex_chars.as_slice())
         .parse_selection_as_str()
@@ -37,7 +36,12 @@ fn parse_number(c: cs::Cursor) -> Result<(cs::Cursor, Number), cs::ParseError> {
     }
 
     // try third variant - no need to clone
-    if let Ok((c, int)) = c.digits(1..).parse_selection().validate() {
+    if let Ok((c, int)) = c
+        .debug_context("decimal")
+        .digits(1..)
+        .parse_selection()
+        .validate()
+    {
         return Ok((c, Number::Decimal(int)));
     }
 
@@ -46,7 +50,6 @@ fn parse_number(c: cs::Cursor) -> Result<(cs::Cursor, Number), cs::ParseError> {
         args: "",
     })
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -2,7 +2,7 @@ pub(crate) use crate::error::ParseError;
 pub(crate) use crate::text_parser::{Cursor};
 
 
-pub use crate::text_parser::{Matchable, Selectable};
+pub use crate::text_parser::{Matchable, Selectable, Bind};
 
 
 

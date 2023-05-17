@@ -2,9 +2,9 @@ use chainsaw::prelude::*;
 use std::str::FromStr;
 
 #[derive(PartialEq, Debug)]
-struct Time {
-    hours: u32,
-    mins: u32,
+pub struct Time {
+    pub hours: u32,
+    pub mins: u32,
 }
 
 impl Time {

@@ -7,5 +7,6 @@ mod enum_strum;
 mod enum_variant;
 mod intro;
 mod time;
+mod composition;
 
 fn main() {}
