@@ -1,4 +1,4 @@
-use chainsaw::prelude::*;
+use kateno::prelude::*;
 
 #[derive(PartialEq, Debug)]
 struct QuotedText {
@@ -18,7 +18,7 @@ impl QuotedText {
 /// eg "'Hello World!', said Ferris"
 /// lexing and parsing together
 ///
-fn parse_quoted_text(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::ParseError> {
+fn parse_quoted_text(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
     // step 1: find out which quote char is used
     let (c, quote) = c
         .chars_in(1..=1, &['"', '\''])
@@ -36,7 +36,7 @@ fn parse_quoted_text(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::Pars
 
 /// alternative implementation using "bind"
 /// 
-fn parse_quoted_text_v2(c: cs::Cursor) -> Result<(cs::Cursor, QuotedText), cs::ParseError> {
+fn parse_quoted_text_v2(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
     let mut quote = char::default();
     let (c, text) = c
         .chars_in(1..=1, &['"', '\''])
@@ -55,9 +55,9 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_quoted_text() -> Result<(), cs::ParseError> {
+    fn test_parse_quoted_text() -> Result<(), ParseError> {
         let s = "'Hello World!', said Ferris";
-        let (c, qt) = parse_quoted_text(cs::Cursor::from(s))?;
+        let (c, qt) = parse_quoted_text(Cursor::from(s))?;
         assert_eq!(qt, QuotedText::new('\'', "Hello World!"));
         assert_eq!(c.str()?, ", said Ferris");
 

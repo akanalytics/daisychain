@@ -1,6 +1,6 @@
 use std::unreachable;
 
-use chainsaw::prelude::*;
+use kateno::prelude::*;
 
 use crate::time::Time;
 
@@ -8,7 +8,7 @@ use crate::time::Time;
 /// where the same data type presents in different formats, simple aternation can be used to try
 /// and match against different parsers. Cursor's can be cloned to save the position for re-parsing
 
-pub fn parse_clock(c: cs::Cursor) -> Result<(cs::Cursor, Time), cs::ParseError> {
+pub fn parse_clock(c: Cursor) -> Result<(Cursor, Time), ParseError> {
     let (c1, time) = c.chars_any(5..=5).parse_selection::<Time>().validate()?;
 
     // Cursor methods move out of the cursor they are called on.
@@ -40,7 +40,7 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_clock() -> Result<(), cs::ParseError> {
+    fn test_parse_clock() -> Result<(), ParseError> {
         assert_eq!(parse_clock("11:35 AM".into())?.1, Time::new(11, 35));
         assert_eq!(parse_clock("11:59 PM".into())?.1, Time::new(23, 59));
         assert_eq!(parse_clock("01:59".into())?.1, Time::new(1, 59));

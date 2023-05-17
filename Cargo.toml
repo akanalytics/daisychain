@@ -2,11 +2,11 @@
 authors = ["Andy Watkins <andy@webcalculator.com>"]
 description = "a method chaining parsing library"
 edition = "2021"
-name = "chainsaw"
+name = "kateno"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
 rust-version = "1.56"
-repository = "https://github.com/akanalytics/chainsaw"
+repository = "https://github.com/akanalytics/kateno"
 keywords = ["parsing", "parser"]
 categories = ["parsing", ]
 readme = "README.md"

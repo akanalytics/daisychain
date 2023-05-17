@@ -1,4 +1,4 @@
-use chainsaw::prelude::*;
+use kateno::prelude::*;
 use std::str::FromStr;
 
 #[derive(PartialEq, Debug)]
@@ -14,13 +14,13 @@ impl Time {
 }
 
 impl FromStr for Time {
-    type Err = cs::ParseError;
+    type Err = ParseError;
 
     /// eg "09:23" or "23:59"
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_cur, hours, mins) = cs::Cursor::from(s)
+        let (_cur, hours, mins) = Cursor::from(s)
             .digits(2..=2)
-            .parse_selection::<u32>() // chainsaw will use u32::FromStr
+            .parse_selection::<u32>() // kateno will use u32::FromStr
             .text(":")
             .digits(2..=2)
             .parse_selection() // often no need to specify type explicitly
@@ -45,12 +45,12 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_three_times() -> Result<(), cs::ParseError> {
+    fn test_parse_three_times() -> Result<(), ParseError> {
         let s = "09:23 11:45 23:59";
         let valid_chars: Vec<_> = "0123456789:".chars().collect();
         let valid_chars = valid_chars.as_slice();
 
-        let (_c, t1, t2, t3) = cs::Cursor::from(s)
+        let (_c, t1, t2, t3) = Cursor::from(s)
             .chars_in(1.., valid_chars)
             .parse_selection::<Time>() // use the Time::FromStr we've just defined
             .ws()

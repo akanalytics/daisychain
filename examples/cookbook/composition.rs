@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use chainsaw::prelude::{
-    cs::{Cursor, ParseError},
+use kateno::prelude::{
+    {Cursor, ParseError},
     *,
 };
 
@@ -18,10 +18,10 @@ struct TimePeriod(Time, Time);
 /// often using FromStr to composite parsers works nicely
 ///
 impl FromStr for TimePeriod {
-    type Err = cs::ParseError;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_c, time1, time2) = cs::Cursor::from(s)
+        let (_c, time1, time2) = Cursor::from(s)
             .chars_any(5..=5)
             .parse_selection() // uses .parse_selection::<Time>()
             .text("-")

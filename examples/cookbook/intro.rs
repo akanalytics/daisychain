@@ -16,7 +16,7 @@
 
 #[cfg(test)]
 mod tests {
-    use chainsaw::prelude::*;
+    use kateno::prelude::*;
     use test_log::test;
 
     ///

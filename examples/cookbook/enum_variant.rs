@@ -1,4 +1,4 @@
-use chainsaw::prelude::*;
+use kateno::prelude::*;
 
 #[derive(PartialEq, Debug)]
 enum Number {
@@ -9,7 +9,7 @@ enum Number {
 
 /// the idea is to use `if let` to try and parse the enum variants in succession.
 ///
-fn parse_number(c: cs::Cursor) -> Result<(cs::Cursor, Number), cs::ParseError> {
+fn parse_number(c: Cursor) -> Result<(Cursor, Number), ParseError> {
     // try first variant (using clone to save the initial cursor position)
     if let Ok((c, s)) = c
         .clone()
@@ -45,7 +45,7 @@ fn parse_number(c: cs::Cursor) -> Result<(cs::Cursor, Number), cs::ParseError> {
         return Ok((c, Number::Decimal(int)));
     }
 
-    Result::Err(cs::ParseError::NoMatch {
+    Result::Err(ParseError::NoMatch {
         action: "Unknown format",
         args: "",
     })

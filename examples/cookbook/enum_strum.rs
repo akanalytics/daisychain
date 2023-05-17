@@ -1,4 +1,4 @@
-use chainsaw::prelude::*;
+use kateno::prelude::*;
 use strum::VariantNames;
 use strum_macros::{EnumString, EnumVariantNames};
 
@@ -18,7 +18,7 @@ enum FancyColor {
     Lime,
 }
 
-fn parse_fancy_enum(c: cs::Cursor) -> Result<(cs::Cursor, FancyColor), cs::ParseError> {
+fn parse_fancy_enum(c: Cursor) -> Result<(Cursor, FancyColor), ParseError> {
     c.text_alt(FancyColor::VARIANTS).parse_selection().validate()
 }
 
@@ -29,7 +29,7 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_enum() -> Result<(), cs::ParseError> {
+    fn test_parse_enum() -> Result<(), ParseError> {
         let (c, color) = parse_fancy_enum("Burgundy Arrow".into())?;
         assert_eq!(color, FancyColor::Burgundy);
         assert_eq!(c.str()?, " Arrow");

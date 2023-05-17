@@ -29,17 +29,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "chainsaw"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "log",
- "strum",
- "strum_macros",
- "test-log",
-]
-
-[[package]]
 name = "env_logger"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -72,6 +61,17 @@ name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
+
+[[package]]
+name = "kateno"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "log",
+ "strum",
+ "strum_macros",
+ "test-log",
+]
 
 [[package]]
 name = "libc"
