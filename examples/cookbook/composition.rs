@@ -86,6 +86,29 @@ fn parse_timetable(s: &str) -> Result<Vec<TrainTime>, ParseError> {
     Ok(vec)
 }
 
+
+
+fn parse_str_clock(s: &str) -> Result<(&str, Time), ParseError> {
+    let (c, time) = Cursor::from(s).parse_with(parse_clock).validate()?;
+    Ok((c.str()?, time))
+}
+
+fn parse_str_traintime(c: &str) -> Result<(&str, TrainTime), ParseError> {
+    let (c, city, arr, dep) = Cursor::from(c)
+        .word()
+        .parse_selection()
+        .ws()
+        .text("Arrive")
+        .ws()
+        .parse_with_str(parse_str_clock) // free function accepted
+        .ws()
+        .text("Depart")
+        .ws()
+        .parse_with_str(|c| parse_str_clock(c)) // closure accepted
+        .validate()?;
+    Ok((c.str()?, TrainTime { city, arr, dep }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

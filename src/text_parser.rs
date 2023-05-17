@@ -750,7 +750,7 @@ pub trait Matchable<'a>: Sized {
         }
     }
 
-    fn parse_struct_str<P, T>(self, mut parser: P) -> (Self, Option<T>)
+    fn parse_with_str<P, T>(self, mut parser: P) -> (Self, Option<T>)
     where
         P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
     {
@@ -801,31 +801,31 @@ pub trait Matchable<'a>: Sized {
     //     Ok(self)
     // }
 
-    fn parse_put<P, T>(self, mut parser: P, dest: &mut T) -> Result<Self, ParseError>
-    where
-        P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
-    {
-        let s: &str = self.str()?;
-        let outcome = (parser)(s)?;
-        let (_s, t): (&str, T) = outcome;
-        *dest = t;
-        Ok(self)
-    }
+    // fn parse_put<P, T>(self, mut parser: P, dest: &mut T) -> Result<Self, ParseError>
+    // where
+    //     P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
+    // {
+    //     let s: &str = self.str()?;
+    //     let outcome = (parser)(s)?;
+    //     let (_s, t): (&str, T) = outcome;
+    //     *dest = t;
+    //     Ok(self)
+    // }
 
-    fn parse_to_opt<P, T>(self, mut parser: P, dest: &mut Option<T>) -> Result<Self, ParseError>
-    where
-        P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
-    {
-        let s: &str = self.str()?;
-        let outcome = (parser)(s)?;
-        let (_s, t): (&str, T) = outcome;
-        *dest = Some(t);
-        Ok(self)
-    }
+    // fn parse_to_opt<P, T>(self, mut parser: P, dest: &mut Option<T>) -> Result<Self, ParseError>
+    // where
+    //     P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
+    // {
+    //     let s: &str = self.str()?;
+    //     let outcome = (parser)(s)?;
+    //     let (_s, t): (&str, T) = outcome;
+    //     *dest = Some(t);
+    //     Ok(self)
+    // }
 
-    fn set_result<T>(self, _t: T) -> Result<(&'a str, T), ParseError> {
-        todo!()
-    }
+    // fn set_result<T>(self, _t: T) -> Result<(&'a str, T), ParseError> {
+    //     todo!()
+    // }
 
     // fn ok<T>(self, t: T) -> Result<(&'a str, T), BadMatch> {
     //     Ok((self.to_str()?, t))
@@ -1369,7 +1369,7 @@ mod tests {
                 .text("{")
                 .ws()
                 .parse_struct_vec(|c| {
-                    c.parse_struct_str(|c| parse_time_v3(c))
+                    c.parse_with_str(|c| parse_time_v3(c))
                         .maybe(",")
                         .ws()
                         .validate()

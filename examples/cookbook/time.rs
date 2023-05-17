@@ -13,6 +13,7 @@ impl Time {
     }
 }
 
+
 impl FromStr for Time {
     type Err = ParseError;
 
