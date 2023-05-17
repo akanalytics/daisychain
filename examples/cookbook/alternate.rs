@@ -12,6 +12,7 @@ enum Clock {
     H24(u32, u32),       // "14:30"
 }
 
+/// 
 fn parse_clock(c: cs::Cursor) -> Result<(cs::Cursor, Clock), cs::ParseError> {
     let (c1, h, m) = c
         .digits(1..=2)

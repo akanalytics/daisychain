@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 mod alternate;
 mod bracketed;
 mod enum_handcrafted;
