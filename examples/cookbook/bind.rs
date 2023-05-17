@@ -7,11 +7,8 @@ struct QuotedText {
 }
 
 impl QuotedText {
-    fn new(quote: char, text: &str) -> Self {
-        Self {
-            quote,
-            text: text.to_string(),
-        }
+    fn new(quote: char, text: String) -> Self {
+        Self { quote, text }
     }
 }
 
@@ -35,7 +32,7 @@ fn parse_quoted_text(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
 }
 
 /// alternative implementation using "bind"
-/// 
+///
 fn parse_quoted_text_v2(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
     let mut quote = char::default();
     let (c, text) = c
@@ -58,15 +55,15 @@ mod tests {
     fn test_parse_quoted_text() -> Result<(), ParseError> {
         let s = "'Hello World!', said Ferris";
         let (c, qt) = parse_quoted_text(Cursor::from(s))?;
-        assert_eq!(qt, QuotedText::new('\'', "Hello World!"));
+        assert_eq!(qt, QuotedText::new('\'', "Hello World!".to_string()));
         assert_eq!(c.str()?, ", said Ferris");
 
         let (cursor, qt) = parse_quoted_text("\"Hi\", he said".into())?;
-        assert_eq!(qt, QuotedText::new('"', "Hi"));
+        assert_eq!(qt, QuotedText::new('"', "Hi".to_string()));
         assert_eq!(cursor.str()?, ", he said");
 
         let (cursor, qt) = parse_quoted_text_v2("\"Hi\", he said".into())?;
-        assert_eq!(qt, QuotedText::new('"', "Hi"));
+        assert_eq!(qt, QuotedText::new('"', "Hi".to_string()));
         assert_eq!(cursor.str()?, ", he said");
 
         let res = parse_quoted_text("'Hi, ".into());

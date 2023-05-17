@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 mod alternate;
-mod bracketed;
+mod bind;
 mod enum_handcrafted;
 mod enum_strum;
 mod enum_variant;

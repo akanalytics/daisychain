@@ -1,8 +1,7 @@
 use std::str::FromStr;
 
 use kateno::prelude::{
-    {Cursor, ParseError},
-    *,
+    *, {Cursor, ParseError},
 };
 
 use crate::{alternate::parse_clock, time::Time};
@@ -53,6 +52,10 @@ struct TrainTime {
     dep: Time,
 }
 
+///
+/// parse_with expects a closure/function that matches
+///  fn(Cursor) -> Result<(Cursor,T), ParseError>
+///
 fn parse_traintime(c: Cursor) -> Result<(Cursor, TrainTime), ParseError> {
     let (c, city, arr, dep) = c
         .word()
@@ -60,11 +63,11 @@ fn parse_traintime(c: Cursor) -> Result<(Cursor, TrainTime), ParseError> {
         .ws()
         .text("Arrive")
         .ws()
-        .parse_with(parse_clock)
+        .parse_with(parse_clock) // free function accepted
         .ws()
         .text("Depart")
         .ws()
-        .parse_with(parse_clock)
+        .parse_with(|c| parse_clock(c)) // closure accepted
         .validate()?;
     Ok((c, TrainTime { city, arr, dep }))
 }
