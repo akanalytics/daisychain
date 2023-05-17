@@ -54,13 +54,13 @@ mod tests {
         let valid_chars = valid_chars.as_slice();
 
         let (_c, t1, t2, t3) = cs::Cursor::from(s)
-            .chars_in(.., valid_chars)
+            .chars_in(1.., valid_chars)
             .parse_selection::<Time>() // use the Time::FromStr we've just defined
             .ws()
-            .chars_in(.., valid_chars)
+            .chars_in(1.., valid_chars)
             .parse_selection::<Time>()
             .ws()
-            .chars_in(.., valid_chars)
+            .chars_in(1.., valid_chars)
             .parse_selection::<Time>()
             .validate()?;
         assert_eq!(t1, Time::new(9, 23));

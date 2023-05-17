@@ -62,6 +62,9 @@ mod tests {
             Some("ello")
         );
 
+        assert_eq!(Some("Hello").chars_in(1.., &['H', 'e']), Some("llo"));
+
+
         // text - match a word
         // text-alt match one of series of words
         assert_eq!(Some("Hello").text("He"), Some("llo"));
