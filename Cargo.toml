@@ -9,7 +9,7 @@ rust-version = "1.65.0"
 repository = "https://github.com/akanalytics/daisychain"
 documentation="https://docs.rs/daisychain"
 keywords = ["parsing", "parser"]
-categories = ["Parsing tools", ]
+categories = ["parsing", ]
 readme = "README.md"
 
 
