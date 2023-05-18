@@ -4,7 +4,7 @@ use daisychain::prelude::{
     *, {Cursor, ParseError},
 };
 
-use crate::{alternate::parse_clock, time::Time};
+use crate::{section_7_alternate::parse_clock, section_2_simple_example::Time};
 
 ///
 ///

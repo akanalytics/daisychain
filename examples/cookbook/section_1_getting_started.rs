@@ -1,17 +1,17 @@
 
-/// running examples
-///
-/// cargo test --example intro
-///     
-/// RUST_LOG=trace cargo test --example intro -- --nocapture
-///
-///
-/// add to Cargo.toml
-/// 
-/// [dev-dependencies]
-/// env_logger = "0.9"
-/// test-log = {version = "0.2"}
-/// 
+//! running examples
+//!
+//! cargo test --example intro
+//!     
+//! RUST_LOG=trace cargo test --example intro -- --nocapture
+//!
+//!
+//! add to Cargo.toml
+//! 
+//! [dev-dependencies]
+//! env_logger = "0.9"
+//! test-log = {version = "0.2"}
+//! 
 
 
 #[cfg(test)]
