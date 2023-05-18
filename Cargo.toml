@@ -9,7 +9,7 @@ rust-version = "1.65.0"
 repository = "https://github.com/akanalytics/daisychain"
 documentation="https://docs.rs/daisychain"
 keywords = ["parsing", "parser"]
-categories = ["Parsing tools", ]
+categories = ["parsing", ]
 readme = "README.md"
 
 
@@ -26,8 +26,8 @@ strum_macros = "0.24"
 [features]
 
 
-#[package.metadata.docs.rs]
-#cargo-args = ["--examples"]
+[package.metadata.docs.rs]
+cargo-args = ["--examples"]
 # cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
 # rustc-args = ["--cfg", "nightly"]
 # rustdoc-args = ["--cfg", "nightly"]

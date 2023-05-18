@@ -26,13 +26,13 @@ pub fn email<'a, C: Matchable<'a>>(c: C) -> C {
 mod tests {
     use crate::{
         contrib::parsers::email,
-        prelude::{Cursor, Matchable},
+        prelude::*,
     };
     use test_log::test;
 
     #[test]
     fn test_email() {
-        assert_eq!(email(Cursor::from("andy@google.com")).str().unwrap(), "");
-        assert_eq!(email(Cursor::from("google.com")).str().is_err(), true);
+        assert_eq!(email(dc::Cursor::from("andy@google.com")).str().unwrap(), "");
+        assert_eq!(email(dc::Cursor::from("google.com")).str().is_err(), true);
     }
 }

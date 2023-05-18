@@ -12,8 +12,8 @@ use crate::{
     error,
     logging::Loggable,
     parser::Parser,
-    prelude::{Cursor, ParseError},
-    LABEL, PACKAGE_NAME,
+    prelude::{dc::Cursor, dc::ParseError},
+    LABEL, LOG_TARGET,
 };
 
 fn cursorify<'a, T>(
@@ -375,7 +375,8 @@ pub trait Matchable<'a>: Sized {
 
     #[inline]
     fn debug_context(self, span_name: &'static str) -> Self {
-        if log_enabled!(target: PACKAGE_NAME, Trace) {
+        if log_enabled!(target: LOG_TARGET, Trace) {
+            LABEL.with(|f| f.set("")); // blank the span name before logging
             self.log_success("debug_context", span_name);
             LABEL.with(|f| f.set(span_name));
         }
@@ -419,6 +420,12 @@ pub trait Matchable<'a>: Sized {
     // "" means always match. use eos() to test for end of string/strea,
     fn text(self, word: &str) -> Self {
         apply(self, |s| s.strip_prefix(word), "text", word)
+    }
+
+    fn char(self, ch: char) -> Self {
+        let mut buf = [0u8; 4];
+        let str = ch.encode_utf8(&mut buf);
+        apply(self, |s| s.strip_prefix(ch), "char", str)
     }
 
     /// text_many(0..1, "word")

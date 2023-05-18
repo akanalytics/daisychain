@@ -2,7 +2,7 @@ use log::Level::Trace;
 use log::{log_enabled, trace};
 
 use crate::prelude::Matchable;
-use crate::{util, LABEL, PACKAGE_NAME};
+use crate::{util, LABEL, LOG_TARGET};
 use std::fmt::Debug;
 
 pub(crate) trait Loggable {
@@ -18,10 +18,10 @@ where
     Cur: Matchable<'a>,
 {
     fn log_inputs<Args: Debug>(&self, msg: &str, args: Args) {
-        if log_enabled!(target: PACKAGE_NAME, Trace) && self.is_skip() {
+        if log_enabled!(target: LOG_TARGET, Trace) && self.is_skip() {
             trace!(
-                target: PACKAGE_NAME,
-                "{label:<lw$} {inp} -- {operation:<lw$}",
+                target: LOG_TARGET,
+                "{inp} {label:<lw$} : {operation:<lw$}",
                 lw = Self::LABEL_WIDTH,
                 label = LABEL.with(|f| f.get()),
                 inp = util::formatter_str(self.str().unwrap_or_default()),
@@ -31,8 +31,8 @@ where
     }
     fn log_success<Args: Debug>(&self, msg: &str, args: Args) {
         trace!(
-            target: PACKAGE_NAME,
-            "{label:<lw$} {inp} -- {operation:<lw$}",
+            target: LOG_TARGET,
+            "{inp} {label:<lw$} : {operation:<lw$}",
             lw = Self::LABEL_WIDTH,
             label = LABEL.with(|f| f.get()),
             inp = util::formatter_str(self.str().unwrap_or_default()),
@@ -41,8 +41,8 @@ where
     }
     fn log_success_with_result<A1: Debug, A2: Debug>(&self, msg: &str, args: A1, res: A2) {
         trace!(
-            target: PACKAGE_NAME,
-            "{label:<lw$} {inp} -- {operation:<lw$} -> {res:?}",
+            target: LOG_TARGET,
+            "{inp} {label:<lw$} : {operation:<lw$} -> {res:?}",
             lw = Self::LABEL_WIDTH,
             label = LABEL.with(|f| f.get()),
             inp = util::formatter_str(self.str().unwrap_or_default()),
@@ -51,8 +51,8 @@ where
     }
     fn log_failure<Args: Debug, Error: Debug>(&self, msg: &str, args: Args, error: &Error) {
         trace!(
-            target: PACKAGE_NAME,
-            "{label:<lw$} {inp} -- {operation:<lw$} -> {e:?}",
+            target: LOG_TARGET,
+            "{inp} {label:<lw$} : {operation:<lw$} -> {e:?}",
             lw = Self::LABEL_WIDTH,
             label = LABEL.with(|f| f.get()),
             inp = util::formatter_str(self.str().unwrap_or_default()),

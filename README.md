@@ -2,8 +2,8 @@
 [![dependency status](https://deps.rs/repo/github/akanalytics/daisychain/status.svg)](https://deps.rs/repo/github/akanalytics/daisychain)
 [![Documentation](https://docs.rs/daisychain/badge.svg)](https://docs.rs/daisychain/)
 [![Minimum rustc version](https://img.shields.io/badge/rustc-1.65.0+-lightgray.svg)](#rust-version-requirements-msrv)
-[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![LICENSE](https://img.shields.io/badge/license-APACHE-lightblue.svg)](LICENSE)
+[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
+[![LICENSE](https://img.shields.io/badge/license-APACHE-lightblue.svg)](LICENSE-APACHE)
 
 
 
@@ -31,7 +31,7 @@ impl FromStr for Time {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (_cursor, hours, mins) = Cursor::from(s)
             .digits(2..=2)             // matching also sets the selection
-            .parse_selection::<u32()  // daisychain will use u32::FromStr
+            .parse_selection::<u32>()  // daisychain will use u32::FromStr
             .text(":")
             .digits(2..=2)
             .parse_selection()         // often no need to specify type explicitly
