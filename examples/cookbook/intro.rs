@@ -16,7 +16,7 @@
 
 #[cfg(test)]
 mod tests {
-    use kateno::prelude::*;
+    use daisychain::prelude::*;
     use test_log::test;
 
     ///

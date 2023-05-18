@@ -1,12 +1,18 @@
 use std::{
     cell::Cell,
+    fmt::Debug,
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
 
-use log::trace;
+
+
+use log::Level::Trace;
+use log::{log_enabled, trace};
 
 use crate::{error, error::ParseError, parser::Parser, selection::Selection, util};
+
+const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 
 thread_local!(static LABEL: Cell<&'static str> = Cell::new(""));
 
@@ -127,6 +133,43 @@ enum NotFound {
     NoMatch,
 }
 
+trait Loggable {
+    fn log_inputs<Args: Debug>(&self, msg: &str, args: Args);
+    fn log_success<Args: Debug>(&self, msg: &str, args: Args);
+    fn log_failure<Args: Debug, Error: Debug>(&self, msg: &str, args: Args, error: &Error);
+}
+impl<'a, Cur> Loggable for Cur
+where
+    Cur: Matchable<'a>,
+{
+    fn log_inputs<Args: Debug>(&self, msg: &str, args: Args) {
+        if log_enabled!(target: PACKAGE_NAME, Trace) && self.is_skip() {
+            trace!(
+                "{label:<20} end<0 {msg:<10}({args:<10?}) = '{inp}'",
+                label = LABEL.with(|f| f.get()),
+                inp = util::formatter_str(self.str().unwrap_or_default()),
+            );
+        }
+    }
+    fn log_success<Args: Debug>(&self, msg: &str, args: Args) {
+        trace!(
+            target: PACKAGE_NAME,
+            "{label:<20} end<0 {msg:<10}({args:<10?}) = '{inp}'",
+            label = LABEL.with(|f| f.get()),
+            inp = util::formatter_str(self.str().unwrap_or_default()),
+        );
+    }
+    fn log_failure<Args: Debug, Error: Debug>(&self, msg: &str, args: Args, error: &Error) {
+        trace!(
+            target: PACKAGE_NAME,
+            "{label:<20} end<0 {msg:<10}({args:<10?}) = '{inp}' -> {e:?}",
+            label = LABEL.with(|f| f.get()),
+            inp = util::formatter_str(self.str().unwrap_or_default()),
+            e = error,
+        );
+    }
+}
+
 #[inline]
 fn find<'a, R, C, F>(cur: C, rb: R, pred: F, action: &'static str, args: &str, _fl: NotFound) -> C
 where
@@ -134,23 +177,17 @@ where
     C: Matchable<'a>,
     F: FnMut(char) -> bool,
 {
+    cur.log_inputs(action, args);
+
     let Ok(s) = cur.str() else {
-        trace!(
-            "{label:<20} skipping {action:<10}({args:<10}) = '{inp}'",
-            label = LABEL.with(|f| f.get()),
-            inp = util::formatter_str(cur.str().unwrap_or_default()),
-        );
         return cur;
     };
     let (start, end) = start_end(&rb);
     if let Some(end) = end {
         if end < 0 {
-            trace!(
-                "{label:<20} end<0 {action:<10}({args:<10}) = '{inp}'",
-                label = LABEL.with(|f| f.get()),
-                inp = util::formatter_str(cur.str().unwrap_or_default()),
-            );
-            return cur.set_error(ParseError::NoMatch { action, args: "" });
+            let e = ParseError::NoMatch { action, args: "" };
+            cur.log_failure(action, args, &e);
+            return cur.set_error(e);
         }
     }
     //  set start to 0, if < 0
@@ -162,13 +199,9 @@ where
         // trace!(">>>> {action} matched on i={i} t={t} from s={s} s = {start} e = {end}");
 
         if i >= start && i <= end + 1 {
-            trace!(
-                "{label:<20} {action:<10}('{inp}') => '{out}'",
-                label = LABEL.with(|f| f.get()),
-                inp = util::formatter_str(cur.str().unwrap_or_default()),
-                out = util::formatter_str(&s[i..])
-            );
-            return cur.set_str(&s[i..]);
+            let cur = cur.set_str(&s[i..]);
+            cur.log_success(action, args);
+            return cur;
         }
     } else if rb.contains(&0) {
         // if 0 in range we can always return where we are
@@ -176,21 +209,17 @@ where
     } else {
         let len = s.chars().count();
         if len < start {
-            trace!(
-                "{label:<20} {action:<10}('{inp}') => No match (len < start)",
-                label = LABEL.with(|f| f.get()),
-                inp = util::formatter_str(cur.str().unwrap_or_default())
-            );
-            return cur.set_error(error::failure(action, ""));
+            let e = ParseError::NoMatch {
+                action,
+                args: "len>start",
+            };
+            cur.log_failure(action, args, &e);
+            return cur.set_error(e);
         } else if len > end {
             let (i, _c) = s.char_indices().nth(end).unwrap();
-            trace!(
-                "{label:<20} {action:<10}('{inp}') => '{out}' (len > end)",
-                label = LABEL.with(|f| f.get()),
-                inp = util::formatter_str(cur.str().unwrap_or_default()),
-                out = util::formatter_str(&s[i..])
-            );
-            return cur.set_str(&s[i..]);
+            let cur = cur.set_str(&s[i..]);
+            cur.log_success(action, args);
+            return cur;
         } else if len == end || start_end(&rb).1.is_none() {
             trace!(
                 "{label:<20} {action:<10}('{inp}') => 'exhausted'",
@@ -201,12 +230,12 @@ where
         }
     }
     // not found and len < end
-    trace!(
-        "{label:<20} {action:<10}('{inp}') => 'No match'",
-        label = LABEL.with(|f| f.get()),
-        inp = util::formatter_str(cur.str().unwrap_or_default()),
-    );
-    cur.set_error(ParseError::NoMatch { action, args: "" })
+    let e = ParseError::NoMatch {
+        action,
+        args: "no match",
+    };
+    cur.log_failure(action, args, &e);
+    return cur.set_error(e);
 }
 
 #[inline]
@@ -215,16 +244,13 @@ where
     C: Matchable<'a>,
     F: FnOnce(&str) -> Option<&str>,
 {
+    cur.log_inputs(msg, args);
     match cur.str() {
         Ok(s) => match f(s) {
             Some(s) => {
-                trace!(
-                    "{label:<20} {msg:<10}({args:<10}) = '{inp}' => '{out}'",
-                    label = LABEL.with(|f| f.get()),
-                    inp = util::formatter_str(cur.str().unwrap_or_default()),
-                    out = util::formatter_str(s)
-                );
-                cur.set_str(s)
+                let cur = cur.set_str(s);
+                cur.log_success(msg, args);
+                cur
             }
             None => {
                 trace!(
@@ -232,18 +258,12 @@ where
                     label = LABEL.with(|f| f.get()),
                     inp = util::formatter_str(cur.str().unwrap_or_default())
                 );
-                cur.set_error(error::failure(msg, s))
+                let e = error::failure(msg, s);
+                cur.log_failure(msg, args, &e);
+                cur.set_error(e)
             }
         },
-        _ => {
-            trace!(
-                "{label:<20} skipping {msg:<10}({args:<10}) = '{inp}'",
-                label = LABEL.with(|f| f.get()),
-                inp = util::formatter_str(cur.str().unwrap_or_default()),
-            );
-
-            cur
-        }
+        _ => cur,
     }
 }
 
@@ -469,6 +489,10 @@ pub trait Matchable<'a>: Sized {
 
     // fn validate(self) -> std::result::Result<Self, ParseError>;
     fn validate(self) -> std::result::Result<Self::DeTuple, ParseError>;
+
+    fn is_skip(&self) -> bool {
+        self.str().is_err()
+    }
 
     fn noop(self) -> Self {
         apply(self, |s| Some(s), "noop", "")
@@ -1391,12 +1415,7 @@ mod tests {
                 .debug_context("time array")
                 .text("{")
                 .ws()
-                .parse_struct_vec(|c| {
-                    c.parse_with(parse_time_v4)
-                        .maybe(",")
-                        .ws()
-                        .validate()
-                })
+                .parse_struct_vec(|c| c.parse_with(parse_time_v4).maybe(",").ws().validate())
                 .ws()
                 .text("}")
                 .validate()?;

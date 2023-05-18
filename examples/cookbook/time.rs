@@ -1,4 +1,4 @@
-use kateno::prelude::*;
+use daisychain::prelude::*;
 use std::str::FromStr;
 
 #[derive(PartialEq, Debug)]
@@ -21,7 +21,7 @@ impl FromStr for Time {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (_cur, hours, mins) = Cursor::from(s)
             .digits(2..=2)
-            .parse_selection::<u32>() // kateno will use u32::FromStr
+            .parse_selection::<u32>() // daisychain will use u32::FromStr
             .text(":")
             .digits(2..=2)
             .parse_selection() // often no need to specify type explicitly

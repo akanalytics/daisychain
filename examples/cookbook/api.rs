@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use kateno::prelude::{Cursor, Matchable, ParseError, Selectable};
+use daisychain::prelude::{Cursor, Matchable, ParseError, Selectable};
 
 #[derive(PartialEq, Debug)]
 struct Money(f32);
