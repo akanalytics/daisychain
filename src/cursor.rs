@@ -1,12 +1,50 @@
 use std::fmt;
 
-use crate::util;
+use crate::{prelude::ParseError, util};
+
+use crate::logging::Loggable;
+
+#[derive(Debug, Clone)]
+pub struct Cursor<'a> {
+    pub selection: Selection<'a>,
+    pub cur: Option<&'a str>,
+    pub err: Option<ParseError>,
+    pub context: &'a str,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Selection<'a> {
     Defaulted(&'a str),
     Start(&'a str, Option<&'a str>),
     Last(&'a str, &'a str),
+}
+
+// equal and error free
+impl<'a> PartialEq for Cursor<'a> {
+    #[allow(clippy::match_like_matches_macro)]
+    fn eq(&self, other: &Self) -> bool {
+        self.selection == other.selection
+            && self.cur == other.cur
+            && self.context == other.context
+            && match (&self.err, &other.err) {
+                (None, None) => true,
+                _ => false,
+            }
+    }
+}
+
+impl<'a> From<&'a str> for Cursor<'a> {
+    #[inline]
+    fn from(s: &'a str) -> Self {
+        let cur = Self {
+            selection: Selection::Defaulted(s),
+            cur: Some(s),
+            err: None,
+            context: "",
+        };
+        cur.log_success("Cursor::from", "");
+        cur
+    }
 }
 
 impl<'a> fmt::Display for Selection<'a> {

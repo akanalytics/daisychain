@@ -4,22 +4,22 @@ use std::{
     str::FromStr,
 };
 
+use log::log_enabled;
 use log::Level::Trace;
-use log::{log_enabled};
 
-use crate::{logging::Loggable, parser::Parser, selection::Selection, prelude::ParseError, error, PACKAGE_NAME, LABEL};
-
-
-
-#[inline]
-pub fn cursor(s: &str) -> Cursor {
-    crate::text_parser::Cursor::from(s)
-}
+use crate::{
+    cursor::Selection,
+    error,
+    logging::Loggable,
+    parser::Parser,
+    prelude::{Cursor, ParseError},
+    LABEL, PACKAGE_NAME,
+};
 
 fn cursorify<'a, T>(
     mut f: impl FnMut(&'a str) -> Result<(&'a str, T), ParseError>,
 ) -> impl FnMut(Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError> {
-    move |c: Cursor<'a>| (f)(c.str()?).map(|(s, t)| (cursor(s), t))
+    move |c: Cursor<'a>| (f)(c.str()?).map(|(s, t)| (Cursor::from(s), t))
 }
 
 // pub trait ParserArg<'a> {
@@ -53,42 +53,6 @@ fn cursorify<'a, T>(
 //         Ok(self.str()?)
 //     }
 // }
-
-#[derive(Debug, Clone)]
-pub struct Cursor<'a> {
-    pub selection: Selection<'a>,
-    pub cur: Option<&'a str>,
-    pub err: Option<ParseError>,
-    pub context: &'a str,
-}
-
-// equal and error free
-impl<'a> PartialEq for Cursor<'a> {
-    #[allow(clippy::match_like_matches_macro)]
-    fn eq(&self, other: &Self) -> bool {
-        self.selection == other.selection
-            && self.cur == other.cur
-            && self.context == other.context
-            && match (&self.err, &other.err) {
-                (None, None) => true,
-                _ => false,
-            }
-    }
-}
-
-impl<'a> From<&'a str> for Cursor<'a> {
-    #[inline]
-    fn from(s: &'a str) -> Self {
-        let cur = Self {
-            selection: Selection::Defaulted(s),
-            cur: Some(s),
-            err: None,
-            context: "",
-        };
-        cur.log_success("Cursor::from", "");
-        cur
-    }
-}
 
 pub trait Bind<T> {
     type Output;
@@ -130,14 +94,13 @@ enum NotFound {
     NoMatch,
 }
 
-
 #[inline]
 fn find<'a, R, C, F, A1>(cur: C, rb: &R, pred: F, action: &'static str, args: &A1) -> C
 where
     R: RangeBounds<i32>,
     C: Matchable<'a>,
     F: FnMut(char) -> bool,
-    A1: Debug
+    A1: Debug,
 {
     cur.log_inputs(action, args);
 
@@ -545,7 +508,7 @@ pub trait Matchable<'a>: Sized {
         )
     }
 
-    fn chars_not_in<R: RangeBounds<i32>+Debug>(self, range: R, chars: &[char]) -> Self {
+    fn chars_not_in<R: RangeBounds<i32> + Debug>(self, range: R, chars: &[char]) -> Self {
         find(
             self,
             &range,
@@ -556,7 +519,7 @@ pub trait Matchable<'a>: Sized {
         )
     }
 
-    fn chars_any<R: RangeBounds<i32>+Debug>(self, range: R) -> Self {
+    fn chars_any<R: RangeBounds<i32> + Debug>(self, range: R) -> Self {
         find(
             self,
             &range,
@@ -567,7 +530,7 @@ pub trait Matchable<'a>: Sized {
         )
     }
 
-    fn chars_match<R: RangeBounds<i32>+Debug, F>(self, range: R, mut pred: F) -> Self
+    fn chars_match<R: RangeBounds<i32> + Debug, F>(self, range: R, mut pred: F) -> Self
     where
         F: FnMut(char) -> bool,
     {
@@ -581,7 +544,7 @@ pub trait Matchable<'a>: Sized {
         )
     }
 
-    fn digits<R: RangeBounds<i32>+Debug>(self, range: R) -> Self {
+    fn digits<R: RangeBounds<i32> + Debug>(self, range: R) -> Self {
         find(
             self,
             &range,
@@ -617,7 +580,7 @@ pub trait Matchable<'a>: Sized {
         )
     }
 
-    fn alphanumerics<R: RangeBounds<i32>+Debug>(self, range: R) -> Self {
+    fn alphanumerics<R: RangeBounds<i32> + Debug>(self, range: R) -> Self {
         find(
             self,
             &range,
@@ -629,7 +592,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     // TODO!
-    fn repeat<P, R: RangeBounds<i32>+Debug>(self, range: R, mut lexer: P) -> Self
+    fn repeat<P, R: RangeBounds<i32> + Debug>(self, range: R, mut lexer: P) -> Self
     where
         P: FnMut(Self) -> Self,
         Self: Clone,
@@ -1104,7 +1067,7 @@ mod tests {
 
     use std::ops::RangeBounds;
 
-    use crate::text_parser::{cursor, Bind, ParseError, Selectable};
+    use crate::text_parser::{Bind, ParseError, Selectable};
 
     use super::{Cursor, Matchable};
     use test_log::test;
@@ -1129,7 +1092,7 @@ mod tests {
 
     fn parse_time_v1(s: &str) -> Result<(&str, Time), ParseError> {
         let (mut hh, mut mm, mut sss) = (0_i32, 0_i32, 0_f64);
-        let c = cursor(s)
+        let c = Cursor::from(s)
             .digits(2..=2)
             .parse_selection()
             .bind(&mut hh)
@@ -1147,7 +1110,7 @@ mod tests {
 
     fn parse_time_v2(s: &str) -> Result<(&str, Time), ParseError> {
         let (mut hh, mut mm, mut sss) = (0_i32, 0_i32, 0_f64);
-        let c = cursor(s)
+        let c = Cursor::from(s)
             .digits(2..=2)
             .parse_selection()
             .bind(&mut hh)
@@ -1168,7 +1131,7 @@ mod tests {
     }
 
     fn parse_time_v3(s: &str) -> Result<(&str, Time), ParseError> {
-        let (c, hh, mm, sss) = cursor(s)
+        let (c, hh, mm, sss) = Cursor::from(s)
             .digits(2..=2)
             .parse_selection()
             .text(":")
@@ -1199,7 +1162,7 @@ mod tests {
 
     #[test]
     fn test_parse_from_str() {
-        let (c, i, j) = cursor("42X45Y")
+        let (c, i, j) = Cursor::from("42X45Y")
             .digits(1..)
             .parse_selection::<i32>()
             .text("X")
@@ -1211,7 +1174,7 @@ mod tests {
         assert_eq!(j, 45);
         assert_eq!(c.cur, Some("Y"));
 
-        let (c, s) = cursor(" cat ")
+        let (c, s) = Cursor::from(" cat ")
             .ws()
             .alphabetics(1..)
             .parse_selection::<String>()
@@ -1221,7 +1184,7 @@ mod tests {
         assert_eq!(s, String::from("cat"));
         assert_eq!(c.cur, Some(""));
 
-        let (c, s) = cursor(" cat ")
+        let (c, s) = Cursor::from(" cat ")
             .ws()
             .alphabetics(1..)
             .parse_selection::<String>()
@@ -1260,7 +1223,7 @@ mod tests {
             ("", Time(23, 59, 13.234))
         );
         assert_eq!(
-            parse_time_v4(cursor("23:59:13.234")).unwrap().1,
+            parse_time_v4(Cursor::from("23:59:13.234")).unwrap().1,
             Time(23, 59, 13.234)
         );
 
@@ -1273,7 +1236,7 @@ mod tests {
 
     #[test]
     fn test_parse_lists() {
-        let s = cursor("1,2,3,4,5,");
+        let s = Cursor::from("1,2,3,4,5,");
         let mut vec1 = vec![];
         let res1 = s.parse_struct_vec_to(
             |c| {
@@ -1293,7 +1256,7 @@ mod tests {
         assert_eq!(res1.unwrap().cur, Some(""));
 
         let mut ll2: Vec<i32> = Vec::new();
-        let s = cursor("{1,2,3,4,5,}");
+        let s = Cursor::from("{1,2,3,4,5,}");
         let res2 = s
             .debug_context("array")
             .text("{")
@@ -1304,7 +1267,7 @@ mod tests {
         assert_eq!(ll2.len(), 5, "linkedlist:{:?}", ll2);
 
         fn parse_str_time_array(s: &str) -> Result<(&str, Vec<Time>), ParseError> {
-            let (c, vec) = cursor(s)
+            let (c, vec) = Cursor::from(s)
                 .debug_context("str time array")
                 .text("{")
                 .ws()
@@ -1337,7 +1300,8 @@ mod tests {
                 .validate()?;
             Ok((c, vec))
         }
-        let res = parse_time_array(cursor("{01:02:03.345, 02:02:03.346, 23:02:03.347}")).unwrap();
+        let res =
+            parse_time_array(Cursor::from("{01:02:03.345, 02:02:03.346, 23:02:03.347}")).unwrap();
         assert_eq!(res.1.len(), 3);
         assert_eq!(res.1[0], Time(1, 2, 3.345));
         assert_eq!(res.1[2], Time(23, 2, 3.347));

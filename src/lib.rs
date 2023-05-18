@@ -14,7 +14,7 @@ use std::cell::Cell;
 mod contrib;
 mod logging;
 mod parser;
-mod selection;
+mod cursor;
 mod error;
 mod text_parser;
 mod util;
