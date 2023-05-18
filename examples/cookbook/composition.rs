@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use kateno::prelude::{
+use daisychain::prelude::{
     *, {Cursor, ParseError},
 };
 

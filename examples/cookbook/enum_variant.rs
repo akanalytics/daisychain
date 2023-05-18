@@ -1,4 +1,4 @@
-use kateno::prelude::*;
+use daisychain::prelude::*;
 
 #[derive(PartialEq, Debug)]
 enum Number {

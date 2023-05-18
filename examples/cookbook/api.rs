@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use kateno::prelude::{Cursor, Matchable, ParseError, Selectable};
+use daisychain::prelude::{Cursor, Matchable, ParseError, Selectable};
 
 #[derive(PartialEq, Debug)]
 struct Money(f32);
@@ -84,10 +84,10 @@ impl MoneyParser {
     }
 }
 
+///
+/// use these various styles of compositng parsers
+/// 
 fn parse_lots_of_money(s: &str) -> Result<Vec<Money>, ParseError> {
-    let mp = MoneyParser {
-        currency: "£".to_string(),
-    };
     let (c, m1, m2, m3) = Cursor::from(s)
         .select(|c| c.text("$").digits(1..).text(".").digits(2..=2))
         .parse_selection() // uses <Money as FromStr>
@@ -97,6 +97,9 @@ fn parse_lots_of_money(s: &str) -> Result<Vec<Money>, ParseError> {
         .parse_with_str(parse_str_money) // uses stir-style free function
         .ws()
         .validate()?;
+
+    let currency = "£".to_string();
+    let mp = MoneyParser { currency };
 
     let (_c, m4) = c
         .parse_with(|c| mp.parse(c)) // uses stir-style free function

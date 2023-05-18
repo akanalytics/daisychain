@@ -1,6 +1,6 @@
 use std::unreachable;
 
-use kateno::prelude::*;
+use daisychain::prelude::*;
 
 use crate::time::Time;
 
