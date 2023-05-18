@@ -2,9 +2,10 @@ use std::unreachable;
 
 use daisychain::prelude::*;
 
-use crate::time::Time;
+use crate::section_2_simple_example::Time;
 
 /// where different text formats represent different data types, an enum variant is appropriate
+/// 
 /// where the same data type presents in different formats, simple aternation can be used to try
 /// and match against different parsers. Cursor's can be cloned to save the position for re-parsing
 

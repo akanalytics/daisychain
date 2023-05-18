@@ -3,12 +3,13 @@ authors = ["Andy Watkins <andy@webcalculator.com>"]
 description = "a method chaining parsing library"
 edition = "2021"
 name = "daisychain"
-version = "0.1.0"
+version = "0.0.2"
 license = "MIT OR Apache-2.0"
-rust-version = "1.56"
+rust-version = "1.65.0"
 repository = "https://github.com/akanalytics/daisychain"
+documentation="https://docs.rs/daisychain"
 keywords = ["parsing", "parser"]
-categories = ["parsing", ]
+categories = ["Parsing tools", ]
 readme = "README.md"
 
 
@@ -23,3 +24,11 @@ strum = "0.24"
 strum_macros = "0.24"
 
 [features]
+
+
+#[package.metadata.docs.rs]
+#cargo-args = ["--examples"]
+# cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples=examples"]
+# rustc-args = ["--cfg", "nightly"]
+# rustdoc-args = ["--cfg", "nightly"]
+# cargo-args = ["-Zunstable-options", "-Zrustdoc-scrape-examples"]

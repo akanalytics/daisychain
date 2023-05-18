@@ -6,10 +6,10 @@ use crate::logging::Loggable;
 
 #[derive(Debug, Clone)]
 pub struct Cursor<'a> {
-    pub selection: Selection<'a>,
-    pub cur: Option<&'a str>,
-    pub err: Option<ParseError>,
-    pub context: &'a str,
+    pub(crate) selection: Selection<'a>,
+    pub(crate) cur: Option<&'a str>,
+    pub(crate) err: Option<ParseError>,
+    pub(crate) context: &'static str,
 }
 
 #[derive(Debug, Clone, PartialEq)]

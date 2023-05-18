@@ -1,6 +1,17 @@
+[![Crates.io](https://img.shields.io/crates/v/daisychain.svg?style=flat-square)](https://crates.io/crates/daisychain)
 [![dependency status](https://deps.rs/repo/github/akanalytics/daisychain/status.svg)](https://deps.rs/repo/github/akanalytics/daisychain)
+[![Documentation](https://docs.rs/daisychain/badge.svg)](https://docs.rs/daisychain/)
+[![Minimum rustc version](https://img.shields.io/badge/rustc-1.65.0+-lightgray.svg)](#rust-version-requirements-msrv)
+[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![LICENSE](https://img.shields.io/badge/license-APACHE-lightblue.svg)](LICENSE)
 
-`daisychain` provides a library for parsing unicode text. It aims to have a gentle and intuitive API, without sacrificing performance (it can be zero-copy). Being a library, rather than a framework means that it can be used alongside and complement other parsing toolkits.
+
+
+
+Placeholder crate - `DaisyChain` is a work-in-progress currently, and not quite ready for use!
+
+
+`DaisyChain` provides a library for parsing unicode text. It aims to have a gentle and intuitive API, without sacrificing performance (it can be zero-copy). Being a library, rather than a framework means that it can be used alongside and complement other parsing toolkits.
 
 ## Synopsis
 
@@ -30,6 +41,7 @@ impl FromStr for Time {
     }
 }
 ```
+See [The DaisyChain Cookbook](https://docs.rs/crate/daisychain/latest/source/examples/cookbook/) for more examples
 
 ## License
 
