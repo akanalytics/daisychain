@@ -17,7 +17,7 @@ impl<'a> fmt::Display for Selection<'a> {
                 f,
                 "Start('{}', '{}')",
                 util::formatter_str(s),
-                util::formatter(opt_t)
+                util::formatter_str(opt_t.unwrap_or_default())
             )?,
             Self::Last(s, e) => write!(
                 f,

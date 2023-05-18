@@ -1,20 +1,15 @@
 use std::{
-    cell::Cell,
     fmt::Debug,
     ops::{Bound, RangeBounds},
     str::FromStr,
 };
 
-
-
 use log::Level::Trace;
-use log::{log_enabled, trace};
+use log::{log_enabled};
 
-use crate::{error, error::ParseError, parser::Parser, selection::Selection, util};
+use crate::{logging::Loggable, parser::Parser, selection::Selection, prelude::ParseError, error, PACKAGE_NAME, LABEL};
 
-const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 
-thread_local!(static LABEL: Cell<&'static str> = Cell::new(""));
 
 #[inline]
 pub fn cursor(s: &str) -> Cursor {
@@ -84,12 +79,14 @@ impl<'a> PartialEq for Cursor<'a> {
 impl<'a> From<&'a str> for Cursor<'a> {
     #[inline]
     fn from(s: &'a str) -> Self {
-        Self {
+        let cur = Self {
             selection: Selection::Defaulted(s),
             cur: Some(s),
             err: None,
             context: "",
-        }
+        };
+        cur.log_success("Cursor::from", "");
+        cur
     }
 }
 
@@ -133,56 +130,21 @@ enum NotFound {
     NoMatch,
 }
 
-trait Loggable {
-    fn log_inputs<Args: Debug>(&self, msg: &str, args: Args);
-    fn log_success<Args: Debug>(&self, msg: &str, args: Args);
-    fn log_failure<Args: Debug, Error: Debug>(&self, msg: &str, args: Args, error: &Error);
-}
-impl<'a, Cur> Loggable for Cur
-where
-    Cur: Matchable<'a>,
-{
-    fn log_inputs<Args: Debug>(&self, msg: &str, args: Args) {
-        if log_enabled!(target: PACKAGE_NAME, Trace) && self.is_skip() {
-            trace!(
-                "{label:<20} end<0 {msg:<10}({args:<10?}) = '{inp}'",
-                label = LABEL.with(|f| f.get()),
-                inp = util::formatter_str(self.str().unwrap_or_default()),
-            );
-        }
-    }
-    fn log_success<Args: Debug>(&self, msg: &str, args: Args) {
-        trace!(
-            target: PACKAGE_NAME,
-            "{label:<20} end<0 {msg:<10}({args:<10?}) = '{inp}'",
-            label = LABEL.with(|f| f.get()),
-            inp = util::formatter_str(self.str().unwrap_or_default()),
-        );
-    }
-    fn log_failure<Args: Debug, Error: Debug>(&self, msg: &str, args: Args, error: &Error) {
-        trace!(
-            target: PACKAGE_NAME,
-            "{label:<20} end<0 {msg:<10}({args:<10?}) = '{inp}' -> {e:?}",
-            label = LABEL.with(|f| f.get()),
-            inp = util::formatter_str(self.str().unwrap_or_default()),
-            e = error,
-        );
-    }
-}
 
 #[inline]
-fn find<'a, R, C, F>(cur: C, rb: R, pred: F, action: &'static str, args: &str, _fl: NotFound) -> C
+fn find<'a, R, C, F, A1>(cur: C, rb: &R, pred: F, action: &'static str, args: &A1) -> C
 where
     R: RangeBounds<i32>,
     C: Matchable<'a>,
     F: FnMut(char) -> bool,
+    A1: Debug
 {
     cur.log_inputs(action, args);
 
     let Ok(s) = cur.str() else {
         return cur;
     };
-    let (start, end) = start_end(&rb);
+    let (start, end) = start_end(rb);
     if let Some(end) = end {
         if end < 0 {
             let e = ParseError::NoMatch { action, args: "" };
@@ -193,11 +155,8 @@ where
     //  set start to 0, if < 0
     let start = start.unwrap_or_default() as usize;
     let end = end.unwrap_or(i32::MAX) as usize;
-    // trace!(">>>> {action} {} -> {}", start, end);
 
     if let Some((i, _t)) = s.match_indices(pred).nth(0) {
-        // trace!(">>>> {action} matched on i={i} t={t} from s={s} s = {start} e = {end}");
-
         if i >= start && i <= end + 1 {
             let cur = cur.set_str(&s[i..]);
             cur.log_success(action, args);
@@ -220,13 +179,10 @@ where
             let cur = cur.set_str(&s[i..]);
             cur.log_success(action, args);
             return cur;
-        } else if len == end || start_end(&rb).1.is_none() {
-            trace!(
-                "{label:<20} {action:<10}('{inp}') => 'exhausted'",
-                label = LABEL.with(|f| f.get()),
-                inp = util::formatter_str(cur.str().unwrap_or_default()),
-            );
-            return cur.set_str("");
+        } else if len == end || start_end(rb).1.is_none() {
+            let cur = cur.set_str("");
+            cur.log_success(action, args);
+            return cur;
         }
     }
     // not found and len < end
@@ -253,11 +209,6 @@ where
                 cur
             }
             None => {
-                trace!(
-                    "{label:<20} {msg:<10}({args:<10}) = '{inp}' => None",
-                    label = LABEL.with(|f| f.get()),
-                    inp = util::formatter_str(cur.str().unwrap_or_default())
-                );
                 let e = error::failure(msg, s);
                 cur.log_failure(msg, args, &e);
                 cur.set_error(e)
@@ -308,10 +259,6 @@ pub trait Selectable<'a>: Matchable<'a> {
     // fn parse_selection_as_i32(self) -> Result<(Self::Cursor, i32), BadMatch> {
     //     let (text, me) = self.get_selection()?;
     //     let cur = me.as_cursor();
-    //     trace!(
-    //         "parse_selection_as_i32({text}) Cursor => '{}'",
-    //         formatter(&cur)
-    //     );
     //     let i = text
     //         .parse::<i32>()
     //         .map_err(|_e| failure("parse i32", text.len()))?;
@@ -319,22 +266,27 @@ pub trait Selectable<'a>: Matchable<'a> {
     //     Ok(res)
     // }
 
-    fn parse_selection<T: FromStr>(self) -> (Self, Option<T>) {
+    fn parse_selection<T: FromStr + Debug>(self) -> (Self, Option<T>) {
+        self.log_inputs("parse_selection", std::any::type_name::<T>());
         if let Ok(text) = self.get_selection() {
-            if let Ok(cur) = self.str() {
-                trace!(
-                    "parse_selection (FromStr)({text}) Cursor => '{}'",
-                    util::formatter_str(cur)
-                );
+            if let Ok(_cur) = self.str() {
                 return match text.parse::<T>() {
-                    Ok(t) => (self, Some(t)),
-                    Err(..) => (
-                        self.set_error(ParseError::NoMatch {
+                    Ok(t) => {
+                        self.log_success_with_result(
+                            "get_selection",
+                            std::any::type_name::<T>(),
+                            &t,
+                        );
+                        (self, Some(t))
+                    }
+                    Err(..) => {
+                        let e = ParseError::NoMatch {
                             action: "FromStr",
                             args: "",
-                        }),
-                        None,
-                    ),
+                        };
+                        self.log_failure("parse_selection", "", &e);
+                        (self.set_error(e), None)
+                    }
                 };
             }
         }
@@ -342,12 +294,10 @@ pub trait Selectable<'a>: Matchable<'a> {
     }
 
     fn parse_selection_as_str(self) -> (Self, Option<&'a str>) {
+        self.log_inputs("parse_selection_as_str", "");
         if let Ok(text) = self.get_selection() {
-            if let Ok(cur) = self.str() {
-                trace!(
-                    "parse_selection (FromStr)({text}) Cursor => '{}'",
-                    util::formatter_str(cur)
-                );
+            if let Ok(_cur) = self.str() {
+                self.log_success_with_result("parse_selection_as_str", "", &text);
                 return (self, Some(text));
             }
         }
@@ -357,10 +307,6 @@ pub trait Selectable<'a>: Matchable<'a> {
     // fn parse_selection_as_f64(self) -> Result<Self::TupleReturn<f64>, ParseError> {
     //     let text = self.get_selection()?;
     //     let cur = self.str()?;
-    //     trace!(
-    //         "parse_selection_as_f64({text}) Cursor => '{}'",
-    //         util::formatter_str(cur)
-    //     );
     //     let i = text
     //         .parse::<f64>()
     //         .map_err(|_e| error::failure("parse f64", text))?;
@@ -372,10 +318,6 @@ pub trait Selectable<'a>: Matchable<'a> {
     // fn parse_selection_as_i32(self) -> Result<Self::TupleReturn<i32>, ParseError> {
     //     let text = self.get_selection()?;
     //     let cur = self.str()?;
-    //     trace!(
-    //         "parse_selection_as_i32({text}) Cursor => '{}'",
-    //         util::formatter_str(cur)
-    //     );
     //     let i = text
     //         .parse::<i32>()
     //         .map_err(|_e| error::failure("parse i32", text))?;
@@ -411,25 +353,19 @@ pub trait Selectable<'a>: Matchable<'a> {
     {
         let msg = "select_with";
         let args = "";
+        self.log_inputs(msg, args);
         if let Ok(s) = self.str() {
             let t = parser(self.selection_start());
             match t.str() {
                 Ok(tt) => {
-                    trace!(
-                        "{label:<20} {msg:<10}({args:<10}) = '{inp}' => '{out}'",
-                        label = LABEL.with(|f| f.get()),
-                        inp = util::formatter_str(s),
-                        out = util::formatter_str(tt)
-                    );
-                    return t.set_str(tt).selection_end();
+                    let t = t.set_str(tt);
+                    t.log_success(msg, args);
+                    return t.selection_end();
                 }
                 _ => {
-                    trace!(
-                        "{label:<20} {msg:<10}({args:<10}) = '{inp}' => None",
-                        label = LABEL.with(|f| f.get()),
-                        inp = util::formatter_str(s)
-                    );
-                    return t.set_error(error::failure(msg, s));
+                    let e = error::failure(msg, s);
+                    t.log_failure(msg, args, &e);
+                    return t.set_error(e);
                 }
             };
         }
@@ -476,14 +412,10 @@ pub trait Matchable<'a>: Sized {
 
     #[inline]
     fn debug_context(self, span_name: &'static str) -> Self {
-        trace!(
-            "setting debug_context to {label}",
-            label = LABEL.with(|f| {
-                f.set(span_name);
-                span_name
-            })
-        );
-
+        if log_enabled!(target: PACKAGE_NAME, Trace) {
+            self.log_success("debug_context", span_name);
+            LABEL.with(|f| f.set(span_name));
+        }
         self
     }
 
@@ -603,67 +535,60 @@ pub trait Matchable<'a>: Sized {
     }
 
     fn chars_in<R: RangeBounds<i32>>(self, range: R, chars: &[char]) -> Self {
-        // trace!("Chats not in {chars:?}");
         find(
             self,
-            range,
+            &range,
             |c| !chars.contains(&c),
             // |s| Some(s.trim_start_matches(chars)),
             "chars_in",
-            "",
-            NotFound::Eos,
+            &chars,
         )
     }
 
-    fn chars_not_in<R: RangeBounds<i32>>(self, range: R, chars: &[char]) -> Self {
-        // trace!("Chats not in {chars:?}");
+    fn chars_not_in<R: RangeBounds<i32>+Debug>(self, range: R, chars: &[char]) -> Self {
         find(
             self,
-            range,
+            &range,
             |c| chars.contains(&c),
             // |s| Some(s.trim_start_matches(|c: char| !chars.contains(&c))),
             "chars_not_in",
-            "",
-            NotFound::Eos,
+            &chars,
         )
     }
 
-    fn chars_any<R: RangeBounds<i32>>(self, range: R) -> Self {
+    fn chars_any<R: RangeBounds<i32>+Debug>(self, range: R) -> Self {
         find(
             self,
-            range,
+            &range,
             |_c| false,
             // |s| Some(s.trim_start_matches(|c: char| !chars.contains(&c))),
-            "chars_not_in",
-            "",
-            NotFound::Eos,
+            "chars_any",
+            &range,
         )
     }
 
-    fn chars_match<R: RangeBounds<i32>, F>(self, range: R, mut pred: F) -> Self
+    fn chars_match<R: RangeBounds<i32>+Debug, F>(self, range: R, mut pred: F) -> Self
     where
         F: FnMut(char) -> bool,
     {
         find(
             self,
-            range,
+            &range,
             |c| !pred(c),
             // |s| Some(s.trim_start_matches(&mut pred)),
             "chars_match",
-            "",
-            NotFound::Eos,
+            &range,
         )
     }
 
-    fn digits<R: RangeBounds<i32>>(self, range: R) -> Self {
+    fn digits<R: RangeBounds<i32>+Debug>(self, range: R) -> Self {
         find(
             self,
-            range,
+            &range,
             |c| !c.is_ascii_digit(),
             // |s| Some(s.trim_start_matches(|c: char| c.is_ascii_digit())),
             "digits",
-            "",
-            NotFound::Eos,
+            &range,
         )
     }
 
@@ -681,32 +606,30 @@ pub trait Matchable<'a>: Sized {
         )
     }
 
-    fn alphabetics<R: RangeBounds<i32>>(self, range: R) -> Self {
+    fn alphabetics<R: RangeBounds<i32> + Debug>(self, range: R) -> Self {
         find(
             self,
-            range,
+            &range,
             |c| !c.is_alphabetic(),
             // |s| Some(s.trim_start_matches(|c: char| c.is_alphabetic())),
-            "alpha_many",
-            "",
-            NotFound::Eos,
+            "alphabetics",
+            &range,
         )
     }
 
-    fn alphanumerics<R: RangeBounds<i32>>(self, range: R) -> Self {
+    fn alphanumerics<R: RangeBounds<i32>+Debug>(self, range: R) -> Self {
         find(
             self,
-            range,
+            &range,
             |c| !c.is_alphanumeric(),
             // |s| Some(s.trim_start_matches(|c: char| c.is_alphanumeric())),
-            "alpha_many",
-            "",
-            NotFound::Eos,
+            "alphanumerics",
+            &range,
         )
     }
 
     // TODO!
-    fn repeat<P, R: RangeBounds<i32>>(self, range: R, mut lexer: P) -> Self
+    fn repeat<P, R: RangeBounds<i32>+Debug>(self, range: R, mut lexer: P) -> Self
     where
         P: FnMut(Self) -> Self,
         Self: Clone,
@@ -881,8 +804,7 @@ impl<'a> Matchable<'a> for Option<&'a str> {
     }
 
     #[inline]
-    fn set_error(self, e: ParseError) -> Self {
-        trace!("setting (option) error to {e}");
+    fn set_error(self, _e: ParseError) -> Self {
         None
     }
 
@@ -891,7 +813,6 @@ impl<'a> Matchable<'a> for Option<&'a str> {
     // type Raw = &'a str;
 
     // fn selection_start(self) -> Self::CursorWithSelection {
-    //     trace!("selection_start({})", formatter(&self));
     //     SelectableStr {
     //         cur: self,
     //         s:   self,
@@ -929,48 +850,44 @@ impl<'a> Matchable<'a> for Option<&'a str> {
 
 impl<'a> Selectable<'a> for Cursor<'a> {
     fn get_selection(&self) -> Result<&'a str, ParseError> {
+        self.log_inputs("get_selection", "");
         if let Some(cur) = self.cur {
             let (s, e) = self.selection.selection(cur);
             let len = s.len() - e.len();
-            trace!("get_selection -> '{}'", util::formatter_str(&s[..len]));
+            self.log_success("get_selection", &s[..len]);
             return Ok(&s[..len]);
-        }
-        if self.err.is_none() {
-            dbg!(&self);
         }
         Err(self.clone().err.unwrap())
     }
 
     fn selection_start(self) -> Self {
-        trace!("selection_start({})", util::formatter(&self));
+        self.log_inputs("selection_start", "");
         if let Some(cur) = self.cur {
-            Cursor {
+            let cur = Self {
                 cur: self.cur,
                 selection: Selection::Start(cur, None),
                 err: self.err,
                 context: self.context,
-            }
+            };
+            cur.log_success("selection_end", "");
+            cur
         } else {
-            trace!("skipping selection_start");
             self
         }
     }
 
     fn selection_end(self) -> Self {
+        self.log_inputs("selection_end", "");
         if let Some(_cur) = self.cur {
-            trace!(
-                "selection_end ({}) => {}",
-                self.selection,
-                Selection::Start(self.selection.start(), self.cur)
-            );
-            Self {
+            let cur = Self {
                 cur: self.cur,
                 selection: Selection::Start(self.selection.start(), self.cur),
                 err: self.err,
                 context: self.context,
-            }
+            };
+            cur.log_success("selection_end", "");
+            cur
         } else {
-            trace!("skipping selection_end");
             self
         }
     }
@@ -1001,7 +918,6 @@ impl<'a> Matchable<'a> for Cursor<'a> {
 
     #[inline]
     fn set_error(self, e: ParseError) -> Self {
-        trace!("setting (selection) error to {e}");
         Self {
             selection: self.selection,
             cur: None,
