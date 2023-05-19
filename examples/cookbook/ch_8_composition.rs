@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use daisychain::prelude::*;
 
-use crate::{section_2_simple_example::Time, section_7_alternate::parse_clock};
+use crate::{ch_2_simple_example::Time, ch_7_alternate::parse_clock};
 
 ///
 ///

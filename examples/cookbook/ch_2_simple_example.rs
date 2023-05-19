@@ -22,7 +22,7 @@ impl FromStr for Time {
         let (_cur, hours, mins) = dc::Cursor::from(s)
             .digits(2..=2)
             .parse_selection::<u32>() // daisychain will use u32::FromStr
-            .text(":")
+            .char(':')
             .digits(2..=2)
             .parse_selection() // often no need to specify type explicitly
             .end_of_stream() // ensure we are at end-of-string

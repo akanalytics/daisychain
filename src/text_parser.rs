@@ -422,6 +422,12 @@ pub trait Matchable<'a>: Sized {
         apply(self, |s| s.strip_prefix(word), "text", word)
     }
 
+    fn char(self, ch: char) -> Self {
+        let mut buf = [0u8; 4];
+        let str = ch.encode_utf8(&mut buf);
+        apply(self, |s| s.strip_prefix(ch), "char", str)
+    }
+
     /// text_many(0..1, "word")
     fn maybe(self, word: &str) -> Self {
         apply(self, |s| s.strip_prefix(word).or(Some(s)), "maybe", word)
