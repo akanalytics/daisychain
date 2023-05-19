@@ -11,13 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Pipe seperator on trace/log
 - char(ch) matches on a single char
-- 
+- introduced CHANGELOG.md
+
+### Fixed
+- license links in README
+
 ### Changed
 - log target renamed to "dc" => use RUST_LOG=dc=trace for capturing logging 
 - ParseError and Cursor are in module prelude.dc
 - rename section_ to ch_ in cookbook
 
 ## [0.0.2] - 2023-05-18
-Initial release
+Added documentation
 
-### Added
+## [0.0.1] - 2023-05-18
+Initial release

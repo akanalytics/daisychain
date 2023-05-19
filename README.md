@@ -2,8 +2,8 @@
 [![dependency status](https://deps.rs/repo/github/akanalytics/daisychain/status.svg)](https://deps.rs/repo/github/akanalytics/daisychain)
 [![Documentation](https://docs.rs/daisychain/badge.svg)](https://docs.rs/daisychain/)
 [![Minimum rustc version](https://img.shields.io/badge/rustc-1.65.0+-lightgray.svg)](#rust-version-requirements-msrv)
-[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![LICENSE](https://img.shields.io/badge/license-APACHE-lightblue.svg)](LICENSE)
+[![LICENSE](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
+[![LICENSE](https://img.shields.io/badge/license-APACHE-lightblue.svg)](LICENSE-APACHE)
 
 
 
