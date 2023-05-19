@@ -1,20 +1,14 @@
 use log::trace;
 
-use crate::prelude::{Cursor, Matchable, ParseError};
+use crate::prelude::{dc::Cursor, dc::ParseError, Matchable};
 
 pub trait Parser<'c, C, T> {
     type Error;
     fn parse(&mut self, s: C) -> Result<(C, T), Self::Error>;
 }
 
-
-
-
-
-
 pub type StrFunc<T, E> = for<'c> fn(&'c str) -> Result<(&'c str, T), E>;
 pub type StrMethod<T, X> = for<'c> fn(x: &'c X, &'c str) -> Result<(&'c str, T), ParseError>;
-
 
 impl<'c, T> Parser<'c, Cursor<'c>, T> for StrFunc<T, ParseError> {
     type Error = ParseError;
@@ -36,10 +30,7 @@ where
     }
 }
 
-impl<'c, T, X> Parser<'c, Cursor<'c>, T> for (
-    &'c X,
-    StrMethod<T,X>,
-) {
+impl<'c, T, X> Parser<'c, Cursor<'c>, T> for (&'c X, StrMethod<T, X>) {
     type Error = ParseError;
     fn parse(&mut self, c: Cursor<'c>) -> Result<(Cursor<'c>, T), ParseError> {
         trace!("#### fn(context, &str): {s}", s = c.cur.unwrap_or("-"));
@@ -48,22 +39,17 @@ impl<'c, T, X> Parser<'c, Cursor<'c>, T> for (
     }
 }
 
-
-
-
-
-
-
-
 #[cfg(test)]
 mod tests {
-    use crate::{prelude::{Cursor, ParseError}, parser::{StrFunc, StrMethod, Parser}};
+    use crate::{
+        parser::{Parser, StrFunc, StrMethod},
+        prelude::{dc::Cursor, dc::ParseError},
+    };
 
     #[test]
     fn test_casting() {
-
         // define a simple lexer+parser
-        fn lp<'a, T>(s: Cursor<'a>, mut p: impl Parser<'a, Cursor<'a>, T, Error=ParseError>) {
+        fn lp<'a, T>(s: Cursor<'a>, mut p: impl Parser<'a, Cursor<'a>, T, Error = ParseError>) {
             let _ = p.parse(s);
         }
 
@@ -98,5 +84,4 @@ mod tests {
         lp("|c| self.parse_ex4(c)".into(), |c| selfie.parse_ex4(c));
         lp("|c| parse_ex(c)      ".into(), |c| parse_ex3(c));
     }
-
 }

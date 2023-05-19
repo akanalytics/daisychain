@@ -9,7 +9,7 @@ enum Number {
 
 /// the idea is to use `if let` to try and parse the enum variants in succession.
 ///
-fn parse_number(c: Cursor) -> Result<(Cursor, Number), ParseError> {
+fn parse_number(c: dc::Cursor) -> Result<(dc::Cursor, Number), dc::ParseError> {
     // try first variant (using clone to save the initial cursor position)
     if let Ok((c, s)) = c
         .clone()
@@ -45,7 +45,7 @@ fn parse_number(c: Cursor) -> Result<(Cursor, Number), ParseError> {
         return Ok((c, Number::Decimal(int)));
     }
 
-    Result::Err(ParseError::NoMatch {
+    Result::Err(dc::ParseError::NoMatch {
         action: "Unknown format",
         args: "",
     })

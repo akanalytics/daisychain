@@ -1,10 +1,8 @@
 use std::str::FromStr;
 
-use daisychain::prelude::{
-    *, {Cursor, ParseError},
-};
+use daisychain::prelude::*;
 
-use crate::{section_7_alternate::parse_clock, section_2_simple_example::Time};
+use crate::{section_2_simple_example::Time, section_7_alternate::parse_clock};
 
 ///
 ///
@@ -17,10 +15,11 @@ struct TimePeriod(Time, Time);
 /// often using FromStr to composite parsers works nicely
 ///
 impl FromStr for TimePeriod {
-    type Err = ParseError;
+    type Err = dc::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_c, time1, time2) = Cursor::from(s)
+        let (_c, time1, time2) = dc::Cursor::from(s)
+            .debug_context("time period")
             .chars_any(5..=5)
             .parse_selection() // uses .parse_selection::<Time>()
             .text("-")
@@ -33,7 +32,7 @@ impl FromStr for TimePeriod {
 }
 
 /// where the data is not easily lexed (tokenized appropriately) a
-/// cursor/stream approach can be used.
+/// dc::cursor/stream approach can be used.
 ///
 /// eg a train timetable where UK uses AM/PM and continental trains use 24hour clock
 ///
@@ -54,10 +53,11 @@ struct TrainTime {
 
 ///
 /// parse_with expects a closure/function that matches
-///  fn(Cursor) -> Result<(Cursor,T), ParseError>
+///  fn(dc::Cursor) -> Result<(dc::Cursor,T), dc::ParseError>
 ///
-fn parse_traintime(c: Cursor) -> Result<(Cursor, TrainTime), ParseError> {
+fn parse_traintime(c: dc::Cursor) -> Result<(dc::Cursor, TrainTime), dc::ParseError> {
     let (c, city, arr, dep) = c
+        .debug_context("train_time")
         .word()
         .parse_selection()
         .ws()
@@ -72,10 +72,10 @@ fn parse_traintime(c: Cursor) -> Result<(Cursor, TrainTime), ParseError> {
     Ok((c, TrainTime { city, arr, dep }))
 }
 
-fn parse_timetable(s: &str) -> Result<Vec<TrainTime>, ParseError> {
+fn parse_timetable(s: &str) -> Result<Vec<TrainTime>, dc::ParseError> {
     let mut vec = vec![];
     for line in s.lines() {
-        let c = Cursor::from(line);
+        let c = dc::Cursor::from(line);
         let (_c, tt) = c
             .parse_with(parse_traintime)
             .ws()
@@ -86,15 +86,13 @@ fn parse_timetable(s: &str) -> Result<Vec<TrainTime>, ParseError> {
     Ok(vec)
 }
 
-
-
-fn parse_str_clock(s: &str) -> Result<(&str, Time), ParseError> {
-    let (c, time) = Cursor::from(s).parse_with(parse_clock).validate()?;
+fn parse_str_clock(s: &str) -> Result<(&str, Time), dc::ParseError> {
+    let (c, time) = dc::Cursor::from(s).parse_with(parse_clock).validate()?;
     Ok((c.str()?, time))
 }
 
-fn parse_str_traintime(c: &str) -> Result<(&str, TrainTime), ParseError> {
-    let (c, city, arr, dep) = Cursor::from(c)
+fn parse_str_traintime(c: &str) -> Result<(&str, TrainTime), dc::ParseError> {
+    let (c, city, arr, dep) = dc::Cursor::from(c)
         .word()
         .parse_selection()
         .ws()
@@ -122,7 +120,7 @@ mod tests {
 
     #[test]
     fn test_traintime() {
-        let c = Cursor::from("London Arrive 11:20 PM Depart 11:30 PM");
+        let c = dc::Cursor::from("London Arrive 11:20 PM Depart 11:30 PM");
         let (c, tt) = parse_traintime(c).unwrap();
         assert_eq!(
             tt,

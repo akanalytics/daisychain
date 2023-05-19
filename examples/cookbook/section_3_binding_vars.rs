@@ -15,9 +15,9 @@ impl QuotedText {
 /// eg "'Hello World!', said Ferris"
 /// lexing and parsing together
 ///
-fn parse_quoted_text(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
+fn parse_quoted_text(inp: &str) -> Result<(&str, QuotedText), dc::ParseError> {
     // step 1: find out which quote char is used
-    let (c, quote) = c
+    let (c, quote) = dc::Cursor::from(inp)
         .chars_in(1..=1, &['"', '\''])
         .parse_selection()
         .validate()?;
@@ -28,14 +28,14 @@ fn parse_quoted_text(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
         .parse_selection()
         .chars_in(1..=1, &[quote])
         .validate()?;
-    Ok((c, QuotedText { quote, text }))
+    Ok((c.str()?, QuotedText { quote, text }))
 }
 
 /// alternative implementation using "bind"
 ///
-fn parse_quoted_text_v2(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
+fn parse_quoted_text_v2(inp: &str) -> Result<(&str, QuotedText), dc::ParseError> {
     let mut quote = char::default();
-    let (c, text) = c
+    let (c, text) = dc::Cursor::from(inp)
         .chars_in(1..=1, &['"', '\''])
         .parse_selection()
         .bind(&mut quote) // store the quote found, to use below in the matching method-chain
@@ -43,7 +43,7 @@ fn parse_quoted_text_v2(c: Cursor) -> Result<(Cursor, QuotedText), ParseError> {
         .parse_selection()
         .chars_in(1..=1, &[quote])
         .validate()?;
-    Ok((c, QuotedText { quote, text }))
+    Ok((c.str()?, QuotedText { quote, text }))
 }
 
 #[cfg(test)]
@@ -52,21 +52,21 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_quoted_text() -> Result<(), ParseError> {
+    fn test_parse_quoted_text() -> Result<(), dc::ParseError> {
         let s = "'Hello World!', said Ferris";
-        let (c, qt) = parse_quoted_text(Cursor::from(s))?;
+        let (c, qt) = parse_quoted_text(s)?;
         assert_eq!(qt, QuotedText::new('\'', "Hello World!".to_string()));
-        assert_eq!(c.str()?, ", said Ferris");
+        assert_eq!(c, ", said Ferris");
 
-        let (cursor, qt) = parse_quoted_text("\"Hi\", he said".into())?;
+        let (c, qt) = parse_quoted_text("\"Hi\", he said")?;
         assert_eq!(qt, QuotedText::new('"', "Hi".to_string()));
-        assert_eq!(cursor.str()?, ", he said");
+        assert_eq!(c, ", he said");
 
-        let (cursor, qt) = parse_quoted_text_v2("\"Hi\", he said".into())?;
+        let (c, qt) = parse_quoted_text_v2("\"Hi\", he said")?;
         assert_eq!(qt, QuotedText::new('"', "Hi".to_string()));
-        assert_eq!(cursor.str()?, ", he said");
+        assert_eq!(c, ", he said");
 
-        let res = parse_quoted_text("'Hi, ".into());
+        let res = parse_quoted_text("'Hi, ");
         assert!(res.is_err());
         Ok(())
     }

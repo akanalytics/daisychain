@@ -6,5 +6,5 @@
 // }
 
 pub fn formatter_str(c: &str) -> String {
-    format!("{:<20}", c[..c.len().min(20)].escape_default().to_string())
+    format!("{:<25}", "|".to_string() + &c[..c.len().min(23)].escape_default().to_string() + &"|")
 }

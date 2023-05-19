@@ -12,8 +12,8 @@ use crate::{
     error,
     logging::Loggable,
     parser::Parser,
-    prelude::{Cursor, ParseError},
-    LABEL, PACKAGE_NAME,
+    prelude::{dc::Cursor, dc::ParseError},
+    LABEL, LOG_TARGET,
 };
 
 fn cursorify<'a, T>(
@@ -375,7 +375,7 @@ pub trait Matchable<'a>: Sized {
 
     #[inline]
     fn debug_context(self, span_name: &'static str) -> Self {
-        if log_enabled!(target: PACKAGE_NAME, Trace) {
+        if log_enabled!(target: LOG_TARGET, Trace) {
             self.log_success("debug_context", span_name);
             LABEL.with(|f| f.set(span_name));
         }

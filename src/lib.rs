@@ -21,7 +21,7 @@ mod util;
 pub mod prelude;
 
 
-pub(crate) const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
+pub(crate) const LOG_TARGET: &str = "dc"; // env!("CARGO_PKG_NAME");
 
 thread_local!(pub(crate) static LABEL: Cell<&'static str> = Cell::new(""));
 

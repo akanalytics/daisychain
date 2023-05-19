@@ -9,7 +9,7 @@ use crate::section_2_simple_example::Time;
 /// where the same data type presents in different formats, simple aternation can be used to try
 /// and match against different parsers. Cursor's can be cloned to save the position for re-parsing
 
-pub fn parse_clock(c: Cursor) -> Result<(Cursor, Time), ParseError> {
+pub fn parse_clock(c: dc::Cursor) -> Result<(dc::Cursor, Time), dc::ParseError> {
     let (c1, time) = c.chars_any(5..=5).parse_selection::<Time>().validate()?;
 
     // Cursor methods move out of the cursor they are called on.
@@ -17,6 +17,7 @@ pub fn parse_clock(c: Cursor) -> Result<(Cursor, Time), ParseError> {
     // we need to clone 'c1' first
     if let Ok((c2, ampm)) = c1
         .clone()
+        .debug_context("clock")
         .ws()
         .text_alt(&["am", "AM", "pm", "PM"])
         .parse_selection_as_str() // explicit method as &str doesnt impl FromStr
@@ -41,7 +42,7 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_clock() -> Result<(), ParseError> {
+    fn test_parse_clock() -> Result<(), dc::ParseError> {
         assert_eq!(parse_clock("11:35 AM".into())?.1, Time::new(11, 35));
         assert_eq!(parse_clock("11:59 PM".into())?.1, Time::new(23, 59));
         assert_eq!(parse_clock("01:59".into())?.1, Time::new(1, 59));
