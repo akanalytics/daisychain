@@ -376,6 +376,7 @@ pub trait Matchable<'a>: Sized {
     #[inline]
     fn debug_context(self, span_name: &'static str) -> Self {
         if log_enabled!(target: LOG_TARGET, Trace) {
+            LABEL.with(|f| f.set("")); // blank the span name before logging
             self.log_success("debug_context", span_name);
             LABEL.with(|f| f.set(span_name));
         }
