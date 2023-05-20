@@ -94,7 +94,7 @@ fn parse_lots_of_money(s: &str) -> Result<Vec<Money>, dc::ParseError> {
         .ws()
         .parse_with(parse_money) // uses Cursor-style free function
         .ws()
-        .parse_with_str(parse_str_money) // uses stir-style free function
+        .parse_with(parse_str_money) // uses stir-style free function
         .ws()
         .validate()?;
 

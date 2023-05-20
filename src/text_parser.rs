@@ -11,7 +11,6 @@ use crate::{
     cursor::Selection,
     error,
     logging::Loggable,
-    parser::Parser,
     prelude::{dc::Cursor, dc::ParseError},
     LABEL, LOG_TARGET,
 };
@@ -667,6 +666,8 @@ pub trait Matchable<'a>: Sized {
         }
     }
 
+
+    #[deprecated(since = "0.0.3", note = "use function parse_with instead")]
     fn parse_with_str<P, T>(self, mut parser: P) -> (Self, Option<T>)
     where
         P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
@@ -681,18 +682,7 @@ pub trait Matchable<'a>: Sized {
         (self, None)
     }
 
-    // fn parse_with<C, P, T>(self, mut parser: P) -> (Self, Option<T>)
-    // where
-    //     P: FnMut(Self) -> std::result::Result<(Self, T), ParseError>,
-    //     Self: Clone,
-    // {
-    //     match (parser)(self.clone()) {
-    //         Ok((cur, t)) => (cur, Some(t)),
-    //         Err(e) => (self.set_error(e), None),
-    //     }
-    // }
-
-    fn parse_using<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
+    fn parse_with<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
     where
         P: FnMut(C) -> Result<(C, T), ParseError>,
         Self::Cursor: Clone,
@@ -711,20 +701,20 @@ pub trait Matchable<'a>: Sized {
         (self, None)
     }
 
-    fn parse_with<P, T>(self, mut parser: P) -> (Self, Option<T>)
-    where
-        P: Parser<'a, Self::Cursor, T, Error = ParseError>,
-        Self::Cursor: Clone,
-        Self::Cursor: Matchable<'a>,
-    {
-        if self.str().is_ok() {
-            return match parser.parse(self.cursor().clone()) {
-                Ok((cur, t)) => (self.set_str(cur.str().unwrap()), Some(t)),
-                Err(e) => (self.set_error(e), None),
-            };
-        }
-        (self, None)
-    }
+    // fn parse_with<P, T>(self, mut parser: P) -> (Self, Option<T>)
+    // where
+    //     P: Parser<'a, Self::Cursor, T, Error = ParseError>,
+    //     Self::Cursor: Clone,
+    //     Self::Cursor: Matchable<'a>,
+    // {
+    //     if self.str().is_ok() {
+    //         return match parser.parse(self.cursor().clone()) {
+    //             Ok((cur, t)) => (self.set_str(cur.str().unwrap()), Some(t)),
+    //             Err(e) => (self.set_error(e), None),
+    //         };
+    //     }
+    //     (self, None)
+    // }
     // fn parse_with<P, F, T>(self, mut parser: P, save_func: F) -> Result<Self, ParseError>
     // where
     //     P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
@@ -1260,22 +1250,22 @@ mod tests {
         assert_eq!(parse_time_v3("23:X:13.234Hello").is_err(), true);
 
         let c = Cursor::from("23:59:12.345");
-        let (_c, t) = c.clone().parse_using(parse_time_v1).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(parse_time_v1).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(parse_time_v2).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(parse_time_v2).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(parse_time_v3).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(parse_time_v3).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(parse_time_v4).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(parse_time_v4).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(|c| parse_time_v3(c)).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(|c| parse_time_v3(c)).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(|c| parse_time_v4(c)).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(|c| parse_time_v4(c)).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
     }
 
@@ -1317,7 +1307,7 @@ mod tests {
                 .text("{")
                 .ws()
                 .parse_struct_vec(|c| {
-                    c.parse_with_str(|c| parse_time_v3(c))
+                    c.parse_with(|c| parse_time_v3(c))
                         .maybe(",")
                         .ws()
                         .validate()
