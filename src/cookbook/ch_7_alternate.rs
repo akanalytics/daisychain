@@ -1,8 +1,8 @@
 use std::unreachable;
 
-use daisychain::prelude::*;
+use crate::prelude::*;
 
-use crate::ch_2_simple_example::Time;
+use crate::cookbook::ch_2_simple_example::Time;
 
 /// where different text formats represent different data types, an enum variant is appropriate
 /// 

@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
-use daisychain::prelude::*;
+use crate::prelude::*;
 
-use crate::{ch_2_simple_example::Time, ch_7_alternate::parse_clock};
+use crate::cookbook::{ch_2_simple_example::Time, ch_7_alternate::parse_clock};
 
 ///
 ///
@@ -36,9 +36,9 @@ impl FromStr for TimePeriod {
 ///
 /// eg a train timetable where UK uses AM/PM and continental trains use 24hour clock
 ///
-///     "London Arrive 11:20 PM Depart 11:30 PM
-///      Paris Arrive 13:05 Depart 13:10
-///      Frankfurt Arrive 10:30 Depart 10:35"
+///   "London Arrive 11:20 PM Depart 11:30 PM
+///    Paris Arrive 13:05 Depart 13:10
+///    Frankfurt Arrive 10:30 Depart 10:35"
 ///
 /// This is not easly tokenized by fixed width columns or by whitespace separated words
 ///

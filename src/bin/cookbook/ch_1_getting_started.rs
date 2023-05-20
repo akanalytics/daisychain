@@ -1,6 +1,8 @@
 
-//! getting started: overview, writing test harnesses
+//! running examples
 //!
+//! cargo test --example intro
+//!     
 //! RUST_LOG=trace cargo test --example intro -- --nocapture
 //!
 //!
@@ -13,7 +15,6 @@
 
 //! 
 //!```rust
-//! use daisychain::prelude::*;
 //! assert_eq!(Some(" Hello").ws(), Some("Hello"));
 //! assert_eq!(Some("\nHello").ws(), Some("Hello"));
 //! assert_eq!(None.ws(), None);

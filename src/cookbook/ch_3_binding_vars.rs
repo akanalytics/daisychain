@@ -1,4 +1,4 @@
-use daisychain::prelude::*;
+use crate::prelude::*;
 
 #[derive(PartialEq, Debug)]
 struct QuotedText {

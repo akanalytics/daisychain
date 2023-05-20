@@ -20,6 +20,8 @@ mod util;
 
 pub mod prelude;
 
+#[cfg(any(feature="cookbook", doc))] 
+pub mod cookbook;
 
 pub(crate) const LOG_TARGET: &str = "dc"; // env!("CARGO_PKG_NAME");
 
