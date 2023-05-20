@@ -1,7 +1,6 @@
 use std::unreachable;
 
 use crate::prelude::*;
-
 use crate::cookbook::ch_2_simple_example::Time;
 
 /// where different text formats represent different data types, an enum variant is appropriate
