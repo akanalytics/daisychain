@@ -1,4 +1,4 @@
-use std::{error::Error, fmt, matches, num::{ParseIntError, ParseFloatError}, str::ParseBoolError};
+use std::{error::Error, fmt, matches, num::{ParseIntError, ParseFloatError}, str::ParseBoolError, convert::Infallible};
 
 /// Indicates whether an error can be recovered from, and parsing can continue.
 /// Errors such as "config file not found" in parse functions are likely fatal and
@@ -45,6 +45,12 @@ impl From<ParseBoolError> for ParseError {
             action: "parse bool error",
             args: "",
         }
+    }
+}
+
+impl From<Infallible> for ParseError {
+    fn from(_value: Infallible) -> Self {
+        unreachable!()
     }
 }
 

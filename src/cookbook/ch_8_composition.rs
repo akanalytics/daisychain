@@ -97,11 +97,11 @@ fn parse_str_traintime(c: &str) -> Result<(&str, TrainTime), dc::ParseError> {
         .ws()
         .text("Arrive")
         .ws()
-        .parse_with_str(parse_str_clock) // free function accepted
+        .parse_with(parse_str_clock) // free function accepted
         .ws()
         .text("Depart")
         .ws()
-        .parse_with_str(|c| parse_str_clock(c)) // closure accepted
+        .parse_with(|c| parse_str_clock(c)) // closure accepted
         .validate()?;
     Ok((c.str()?, TrainTime { city, arr, dep }))
 }

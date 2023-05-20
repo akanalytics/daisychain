@@ -58,6 +58,9 @@ pub mod ch_7_alternate;
 pub mod ch_8_composition;
 
 #[cfg(feature="cookbook")] 
+pub mod ch_8_alternate_opt;
+
+#[cfg(feature="cookbook")] 
 pub mod ch_9_parser_api;
 
 fn main() {}

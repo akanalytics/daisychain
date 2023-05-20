@@ -11,7 +11,6 @@ use crate::{
     cursor::Selection,
     error,
     logging::Loggable,
-    parser::Parser,
     prelude::{dc::Cursor, dc::ParseError},
     LABEL, LOG_TARGET,
 };
@@ -267,6 +266,19 @@ pub trait Selectable<'a>: Matchable<'a> {
         (self, None)
     }
 
+    fn parse_opt_selection_as_str(self) -> (Self, Option<Option<&'a str>>) {
+        self.log_inputs("parse_selection_as_str", "");
+        if let Ok(text) = self.get_selection() {
+            if let Ok(_cur) = self.str() {
+                self.log_success_with_result("parse_selection_as_str", "", &text);
+                return (self, Some(Some(text)));
+            } else {
+                return (self, Some(None));
+            }
+        }
+        (self, None)
+    }
+
     // fn parse_selection_as_f64(self) -> Result<Self::TupleReturn<f64>, ParseError> {
     //     let text = self.get_selection()?;
     //     let cur = self.str()?;
@@ -364,7 +376,7 @@ pub trait Matchable<'a>: Sized {
     // type Raw;
     // type CursorWithSelection: Cursor<'a>;
 
-    type Cursor;
+    type Cursor: Matchable<'a>;
     type DeTuple;
 
     fn cursor(&self) -> &Self::Cursor;
@@ -667,6 +679,7 @@ pub trait Matchable<'a>: Sized {
         }
     }
 
+    #[deprecated(since = "0.0.3", note = "use function parse_with instead")]
     fn parse_with_str<P, T>(self, mut parser: P) -> (Self, Option<T>)
     where
         P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
@@ -681,61 +694,150 @@ pub trait Matchable<'a>: Sized {
         (self, None)
     }
 
-    // fn parse_with<C, P, T>(self, mut parser: P) -> (Self, Option<T>)
+    // fn parse_with<P, C, T>(self, parser: P) -> (Self, Option<T>)
     // where
-    //     P: FnMut(Self) -> std::result::Result<(Self, T), ParseError>,
-    //     Self: Clone,
+    //     P: crate::parser::Parser<'a, C, T, Error=ParseError>,
+    //     Self::Cursor: Clone,
+    //     Self::Cursor: TryInto<C> + From<C>,
+    //     C: TryInto<&'a str>
+    //     // alternative:
+    //     // P: FnMut(C) -> Result<(C, T), ParseError>,
+    //     // Self::Cursor: Clone,
+    //     // Self::Cursor: TryInto<C> + From<C>,
+    //     // C: TryInto<&'a str>,
+    //     // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+    //     // <Self as Matchable<'a>>::Cursor: 'a,
     // {
-    //     match (parser)(self.clone()) {
-    //         Ok((cur, t)) => (cur, Some(t)),
-    //         Err(e) => (self.set_error(e), None),
+    //     if !self.is_skip() {
+    //         let res = crate::parser::invoke_parser(self.cursor().clone(), parser);
+    //         match res {
+    //             Ok((_c,t)) => (self, Some(t)),
+    //             Err(_e) => (self, None),
+    //         }
+    //     } else {
+    //         (self, None)
     //     }
     // }
 
-    fn parse_using<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
+    fn parse_opt_with<P, C, T>(self, mut parser: P) -> (Self, Option<Option<T>>)
     where
-        P: FnMut(C) -> Result<(C, T), ParseError>,
+        P: crate::parser::Parser<'a, C, T, Error = ParseError>,
         Self::Cursor: Clone,
         Self::Cursor: TryInto<C> + From<C>,
         C: TryInto<&'a str>,
-        <<Self as Matchable<'a>>::Cursor as TryInto<C>>::Error: std::fmt::Debug, // <<Self as Matchable<'a>>::Cursor as TryInto<&'a str>>::Error: std::fmt::Debug,
+        // alternative:
+        // P: FnMut(C) -> Result<(C, T), ParseError>,
+        // Self::Cursor: Clone,
+        // Self::Cursor: TryInto<C> + From<C>,
+        // C: TryInto<&'a str>,
+        // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+        // <Self as Matchable<'a>>::Cursor: 'a,
     {
         if !self.is_skip() {
-            let res: Result<(C, T), ParseError> =
-                (parser)(self.cursor().clone().try_into().unwrap());
+            let res: Result<(C, T), ParseError> = parser.parse(
+                self.cursor()
+                    .clone()
+                    .try_into()
+                    .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
+            );
             return match res {
-                Ok((cur, t)) => (self.set_str(cur.try_into().unwrap_or_default()), Some(t)),
+                Ok((cur_c, t)) => match cur_c.try_into() {
+                    Ok(s) => (self.set_str(s), Some(Some(t))),
+                    Err(_e) => (self, Some(None)),
+                },
+                Err(_e) => (self, Some(None)),
+            };
+        }
+        (self, None)
+    }
+
+    fn parse_with<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
+    where
+        P: crate::parser::Parser<'a, C, T, Error = ParseError>,
+        Self::Cursor: Clone,
+        Self::Cursor: TryInto<C> + From<C>,
+        C: TryInto<&'a str>,
+        // alternative:
+        // P: FnMut(C) -> Result<(C, T), ParseError>,
+        // Self::Cursor: Clone,
+        // Self::Cursor: TryInto<C> + From<C>,
+        // C: TryInto<&'a str>,
+        // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+        // <Self as Matchable<'a>>::Cursor: 'a,
+    {
+        if !self.is_skip() {
+            let res: Result<(C, T), ParseError> = parser.parse(
+                self.cursor()
+                    .clone()
+                    .try_into()
+                    .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
+            );
+            return match res {
+                Ok((cur_c, t)) => match cur_c.try_into() {
+                    Ok(s) => (self.set_str(s), Some(t)),
+                    Err(_e) => (
+                        self.set_error(ParseError::NoMatch {
+                            action: "",
+                            args: "",
+                        }),
+                        None,
+                    ),
+                },
                 Err(e) => (self.set_error(e), None),
             };
         }
         (self, None)
     }
 
-    fn parse_with<P, T>(self, mut parser: P) -> (Self, Option<T>)
-    where
-        P: Parser<'a, Self::Cursor, T, Error = ParseError>,
-        Self::Cursor: Clone,
-        Self::Cursor: Matchable<'a>,
-    {
-        if self.str().is_ok() {
-            return match parser.parse(self.cursor().clone()) {
-                Ok((cur, t)) => (self.set_str(cur.str().unwrap()), Some(t)),
-                Err(e) => (self.set_error(e), None),
-            };
-        }
-        (self, None)
-    }
-    // fn parse_with<P, F, T>(self, mut parser: P, save_func: F) -> Result<Self, ParseError>
+    // fn parse_with<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
     // where
-    //     P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
-    //     F: FnOnce(T),
+    //     P: FnMut(C) -> Result<(C, T), ParseError>,
+    //     Self::Cursor: Clone,
+    //     Self::Cursor: TryInto<C> + From<C>,
+    //     C: TryInto<&'a str>,
+    //     // alternative:
+    //     // P: FnMut(C) -> Result<(C, T), ParseError>,
+    //     // Self::Cursor: Clone,
+    //     // Self::Cursor: TryInto<C> + From<C>,
+    //     // C: TryInto<&'a str>,
+    //     // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+    //     // <Self as Matchable<'a>>::Cursor: 'a,
     // {
-    //     let s: &str = self.str()?;
-    //     let outcome = (parser)(s)?;
-    //     let (_s, t): (&str, T) = outcome;
-    //     save_func(t);
-    //     Ok(self)
+    //     if !self.is_skip() {
+    //         let res: Result<(C, T), ParseError> = (parser)(
+    //             self.cursor()
+    //                 .clone()
+    //                 .try_into()
+    //                 .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
+    //         );
+    //         return match res {
+    //             Ok((cur_c, t)) => match cur_c.try_into() {
+    //                 Ok(s) => (self.set_str(s), Some(t)),
+    //                 Err(_e) => (
+    //                     self.set_error(ParseError::NoMatch {
+    //                         action: "",
+    //                         args: "",
+    //                     }),
+    //                     None,
+    //                 ),
+    //             },
+    //             Err(e) => (self.set_error(e), None),
+    //         };
+    //     }
+    //     (self, None)
     // }
+
+    // { P, P, P, }
+    // { P, P, P }
+    // P, P, P
+    // PPPPPPPP
+    //
+    // [ (P1,P2), (P1,P2), (P1, P2) ]
+    // (P)
+    // ()
+
+    // parse_opt_with(F) => Option<T>
+    // parse_vec_with(1..,  F) => Vec<T>
 
     // fn parse_put<P, T>(self, mut parser: P, dest: &mut T) -> Result<Self, ParseError>
     // where
@@ -1260,22 +1362,30 @@ mod tests {
         assert_eq!(parse_time_v3("23:X:13.234Hello").is_err(), true);
 
         let c = Cursor::from("23:59:12.345");
-        let (_c, t) = c.clone().parse_using(parse_time_v1).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(parse_time_v1).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(parse_time_v2).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(parse_time_v2).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(parse_time_v3).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(parse_time_v3).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(parse_time_v4).validate().unwrap();
+        let (_c, t) = c.clone().parse_with(parse_time_v4).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(|c| parse_time_v3(c)).validate().unwrap();
+        let (_c, t) = c
+            .clone()
+            .parse_with(|c| parse_time_v3(c))
+            .validate()
+            .unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_using(|c| parse_time_v4(c)).validate().unwrap();
+        let (_c, t) = c
+            .clone()
+            .parse_with(|c| parse_time_v4(c))
+            .validate()
+            .unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
     }
 
@@ -1317,7 +1427,7 @@ mod tests {
                 .text("{")
                 .ws()
                 .parse_struct_vec(|c| {
-                    c.parse_with_str(|c| parse_time_v3(c))
+                    c.parse_with(|c| parse_time_v3(c))
                         .maybe(",")
                         .ws()
                         .validate()

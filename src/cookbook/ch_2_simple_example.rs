@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use std::str::FromStr;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub struct Time {
     pub hours: u32,
     pub mins: u32,
@@ -12,7 +12,6 @@ impl Time {
         Self { hours, mins }
     }
 }
-
 
 impl FromStr for Time {
     type Err = dc::ParseError;
@@ -30,7 +29,6 @@ impl FromStr for Time {
         Ok(Time { hours, mins })
     }
 }
-
 
 #[cfg(test)]
 mod tests {
