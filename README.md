@@ -25,11 +25,11 @@ struct Time {
 }
 
 impl FromStr for Time {
-    type Err = daisychain::prelude::ParseError;
+    type Err = dc::ParseError;
 
     /// eg "09:23" or "23:59"
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let (_cursor, hours, mins) = Cursor::from(s)
+        let (_cursor, hours, mins) = dc::Cursor::from(s)
             .digits(2..=2)             // matching also sets the selection
             .parse_selection::<u32>()  // daisychain will use u32::FromStr
             .text(":")

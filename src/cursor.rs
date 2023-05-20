@@ -1,7 +1,8 @@
 use std::fmt;
 
-use crate::{prelude::dc::ParseError, util};
 use crate::logging::Loggable;
+use crate::prelude::Matchable;
+use crate::{prelude::dc::ParseError, util};
 
 #[derive(Debug, Clone)]
 pub struct Cursor<'a> {
@@ -43,6 +44,14 @@ impl<'a> From<&'a str> for Cursor<'a> {
         };
         cur.log_success("Cursor::from", "");
         cur
+    }
+}
+
+impl<'a> TryFrom<Cursor<'a>> for &'a str {
+    type Error = ParseError;
+
+    fn try_from(value: Cursor<'a>) -> Result<Self, Self::Error> {
+        value.str()
     }
 }
 
@@ -90,5 +99,25 @@ impl<'a> Selection<'a> {
             Selection::Start(s, opt_e) => (s, opt_e.unwrap_or(cur)),
             Selection::Last(s, e) => (s, e),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
+    use test_log::test;
+
+    #[test]
+    fn test_cursor() {
+        let s = "Hello World!";
+        let c1 = dc::Cursor::from(s);
+        let c2: dc::Cursor = s.into();
+
+        let s1 = c1.str().unwrap();
+        assert_eq!(s1, s);
+
+        let s2: &str = c2.try_into().unwrap();
+        assert_eq!(s2, s);
+
     }
 }

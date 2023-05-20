@@ -24,10 +24,7 @@ pub fn email<'a, C: Matchable<'a>>(c: C) -> C {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        contrib::parsers::email,
-        prelude::*,
-    };
+    use super::*;
     use test_log::test;
 
     #[test]

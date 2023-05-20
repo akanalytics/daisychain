@@ -692,6 +692,25 @@ pub trait Matchable<'a>: Sized {
     //     }
     // }
 
+    fn parse_using<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
+    where
+        P: FnMut(C) -> Result<(C, T), ParseError>,
+        Self::Cursor: Clone,
+        Self::Cursor: TryInto<C> + From<C>,
+        C: TryInto<&'a str>,
+        <<Self as Matchable<'a>>::Cursor as TryInto<C>>::Error: std::fmt::Debug, // <<Self as Matchable<'a>>::Cursor as TryInto<&'a str>>::Error: std::fmt::Debug,
+    {
+        if !self.is_skip() {
+            let res: Result<(C, T), ParseError> =
+                (parser)(self.cursor().clone().try_into().unwrap());
+            return match res {
+                Ok((cur, t)) => (self.set_str(cur.try_into().unwrap_or_default()), Some(t)),
+                Err(e) => (self.set_error(e), None),
+            };
+        }
+        (self, None)
+    }
+
     fn parse_with<P, T>(self, mut parser: P) -> (Self, Option<T>)
     where
         P: Parser<'a, Self::Cursor, T, Error = ParseError>,
@@ -1239,6 +1258,25 @@ mod tests {
             ("Hello", Time(23, 59, 13.234))
         );
         assert_eq!(parse_time_v3("23:X:13.234Hello").is_err(), true);
+
+        let c = Cursor::from("23:59:12.345");
+        let (_c, t) = c.clone().parse_using(parse_time_v1).validate().unwrap();
+        assert_eq!(t, Time(23, 59, 12.345));
+
+        let (_c, t) = c.clone().parse_using(parse_time_v2).validate().unwrap();
+        assert_eq!(t, Time(23, 59, 12.345));
+
+        let (_c, t) = c.clone().parse_using(parse_time_v3).validate().unwrap();
+        assert_eq!(t, Time(23, 59, 12.345));
+
+        let (_c, t) = c.clone().parse_using(parse_time_v4).validate().unwrap();
+        assert_eq!(t, Time(23, 59, 12.345));
+
+        let (_c, t) = c.clone().parse_using(|c| parse_time_v3(c)).validate().unwrap();
+        assert_eq!(t, Time(23, 59, 12.345));
+
+        let (_c, t) = c.clone().parse_using(|c| parse_time_v4(c)).validate().unwrap();
+        assert_eq!(t, Time(23, 59, 12.345));
     }
 
     #[test]
