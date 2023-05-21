@@ -683,7 +683,7 @@ pub trait Matchable<'a>: Sized {
 
     fn parse_with<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
     where
-        P: FnMut(C) -> Result<(C, T), ParseError>,
+        P: crate::parser::Parser<'a, C, T, Error=ParseError>,
         Self::Cursor: Clone,
         Self::Cursor: TryInto<C> + From<C>,
         C: TryInto<&'a str>,
@@ -696,7 +696,7 @@ pub trait Matchable<'a>: Sized {
         // <Self as Matchable<'a>>::Cursor: 'a,
     {
         if !self.is_skip() {
-            let res: Result<(C, T), ParseError> = (parser)(
+            let res: Result<(C, T), ParseError> = parser.parse(
                 self.cursor()
                     .clone()
                     .try_into()
@@ -718,6 +718,58 @@ pub trait Matchable<'a>: Sized {
         }
         (self, None)
     }
+
+
+
+
+    // fn parse_with<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
+    // where
+    //     P: FnMut(C) -> Result<(C, T), ParseError>,
+    //     Self::Cursor: Clone,
+    //     Self::Cursor: TryInto<C> + From<C>,
+    //     C: TryInto<&'a str>,
+    //     // alternative:
+    //     // P: FnMut(C) -> Result<(C, T), ParseError>,
+    //     // Self::Cursor: Clone,
+    //     // Self::Cursor: TryInto<C> + From<C>,
+    //     // C: TryInto<&'a str>,
+    //     // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+    //     // <Self as Matchable<'a>>::Cursor: 'a,
+    // {
+    //     if !self.is_skip() {
+    //         let res: Result<(C, T), ParseError> = (parser)(
+    //             self.cursor()
+    //                 .clone()
+    //                 .try_into()
+    //                 .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
+    //         );
+    //         return match res {
+    //             Ok((cur_c, t)) => match cur_c.try_into() {
+    //                 Ok(s) => (self.set_str(s), Some(t)),
+    //                 Err(_e) => (
+    //                     self.set_error(ParseError::NoMatch {
+    //                         action: "",
+    //                         args: "",
+    //                     }),
+    //                     None,
+    //                 ),
+    //             },
+    //             Err(e) => (self.set_error(e), None),
+    //         };
+    //     }
+    //     (self, None)
+    // }
+
+
+
+
+
+
+
+
+
+
+
 
 
     // { P, P, P, }

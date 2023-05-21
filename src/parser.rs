@@ -7,6 +7,35 @@ pub trait Parser<'c, C, T> {
     fn parse(&mut self, s: C) -> Result<(C, T), Self::Error>;
 }
 
+fn invoke_parser<'a, P, C, T>(cur: Cursor<'a>, mut parser: P) -> Result<(Cursor<'a>, T), P::Error>
+where
+    P: Parser<'a, C, T, Error = ParseError>,
+    // C2: TryInto<C> + From<C>,
+    C: TryFrom<Cursor<'a>> + Into<Cursor<'a>>,
+    C: TryInto<&'a str, Error = ParseError>,
+    // alternative:
+    // P: FnMut(C) -> Result<(C, T), ParseError>,
+    // Self::Cursor: Clone,
+    // Self::Cursor: TryInto<C> + From<C>,
+    // C: TryInto<&'a str>,
+    // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+    // <Self as Matchable<'a>>::Cursor: 'a,
+{
+    let res: Result<(C, T), ParseError> = parser.parse(
+        cur.cursor()
+            .clone()
+            .try_into()
+            .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
+    );
+    return match res {
+        Ok((cur_c, t)) => match cur_c.try_into() {
+            Ok(s) => Ok((cur.set_str(s), t)),
+            Err(e) => Err(e),
+        },
+        Err(e) => Err(e),
+    };
+}
+
 pub type StrFunc<T, E> = for<'c> fn(&'c str) -> Result<(&'c str, T), E>;
 pub type StrMethod<T, X> = for<'c> fn(x: &'c X, &'c str) -> Result<(&'c str, T), ParseError>;
 
@@ -19,13 +48,13 @@ impl<'c, T> Parser<'c, Cursor<'c>, T> for StrFunc<T, ParseError> {
     }
 }
 
-impl<'c, T, F> Parser<'c, Cursor<'c>, T> for F
+impl<'c, C, T, F> Parser<'c, C, T> for F
 where
-    F: FnMut(Cursor<'c>) -> Result<(Cursor<'c>, T), ParseError>,
+    F: FnMut(C) -> Result<(C, T), ParseError>,
 {
     type Error = ParseError;
-    fn parse(&mut self, s: Cursor<'c>) -> Result<(Cursor<'c>, T), ParseError> {
-        trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
+    fn parse(&mut self, s: C) -> Result<(C, T), ParseError> {
+        // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
         (self)(s)
     }
 }
