@@ -666,7 +666,6 @@ pub trait Matchable<'a>: Sized {
         }
     }
 
-
     #[deprecated(since = "0.0.3", note = "use function parse_with instead")]
     fn parse_with_str<P, T>(self, mut parser: P) -> (Self, Option<T>)
     where
@@ -688,44 +687,51 @@ pub trait Matchable<'a>: Sized {
         Self::Cursor: Clone,
         Self::Cursor: TryInto<C> + From<C>,
         C: TryInto<&'a str>,
-        <<Self as Matchable<'a>>::Cursor as TryInto<C>>::Error: std::fmt::Debug, // <<Self as Matchable<'a>>::Cursor as TryInto<&'a str>>::Error: std::fmt::Debug,
+        // alternative:
+        // P: FnMut(C) -> Result<(C, T), ParseError>,
+        // Self::Cursor: Clone,
+        // Self::Cursor: TryInto<C> + From<C>,
+        // C: TryInto<&'a str>,
+        // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+        // <Self as Matchable<'a>>::Cursor: 'a,
     {
         if !self.is_skip() {
-            let res: Result<(C, T), ParseError> =
-                (parser)(self.cursor().clone().try_into().unwrap());
+            let res: Result<(C, T), ParseError> = (parser)(
+                self.cursor()
+                    .clone()
+                    .try_into()
+                    .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
+            );
             return match res {
-                Ok((cur, t)) => (self.set_str(cur.try_into().unwrap_or_default()), Some(t)),
+                Ok((cur_c, t)) => match cur_c.try_into() {
+                    Ok(s) => (self.set_str(s), Some(t)),
+                    Err(_e) => (
+                        self.set_error(ParseError::NoMatch {
+                            action: "",
+                            args: "",
+                        }),
+                        None,
+                    ),
+                },
                 Err(e) => (self.set_error(e), None),
             };
         }
         (self, None)
     }
 
-    // fn parse_with<P, T>(self, mut parser: P) -> (Self, Option<T>)
-    // where
-    //     P: Parser<'a, Self::Cursor, T, Error = ParseError>,
-    //     Self::Cursor: Clone,
-    //     Self::Cursor: Matchable<'a>,
-    // {
-    //     if self.str().is_ok() {
-    //         return match parser.parse(self.cursor().clone()) {
-    //             Ok((cur, t)) => (self.set_str(cur.str().unwrap()), Some(t)),
-    //             Err(e) => (self.set_error(e), None),
-    //         };
-    //     }
-    //     (self, None)
-    // }
-    // fn parse_with<P, F, T>(self, mut parser: P, save_func: F) -> Result<Self, ParseError>
-    // where
-    //     P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
-    //     F: FnOnce(T),
-    // {
-    //     let s: &str = self.str()?;
-    //     let outcome = (parser)(s)?;
-    //     let (_s, t): (&str, T) = outcome;
-    //     save_func(t);
-    //     Ok(self)
-    // }
+
+    // { P, P, P, }
+    // { P, P, P }
+    // P, P, P
+    // PPPPPPPP
+    //
+    // [ (P1,P2), (P1,P2), (P1, P2) ]
+    // (P)
+    // ()
+
+    // parse_opt_with(F) => Option<T>
+    // parse_vec_with(1..,  F) => Vec<T>
+
 
     // fn parse_put<P, T>(self, mut parser: P, dest: &mut T) -> Result<Self, ParseError>
     // where
@@ -1262,10 +1268,18 @@ mod tests {
         let (_c, t) = c.clone().parse_with(parse_time_v4).validate().unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_with(|c| parse_time_v3(c)).validate().unwrap();
+        let (_c, t) = c
+            .clone()
+            .parse_with(|c| parse_time_v3(c))
+            .validate()
+            .unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
 
-        let (_c, t) = c.clone().parse_with(|c| parse_time_v4(c)).validate().unwrap();
+        let (_c, t) = c
+            .clone()
+            .parse_with(|c| parse_time_v4(c))
+            .validate()
+            .unwrap();
         assert_eq!(t, Time(23, 59, 12.345));
     }
 

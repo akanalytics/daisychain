@@ -47,6 +47,24 @@ impl<'a> From<&'a str> for Cursor<'a> {
     }
 }
 
+
+// impl<'a> From<&'a Self> for Cursor<'a> {
+//     #[inline]
+//     fn from(c: &'a Self) -> Self {
+//         todo!();
+//         // let cur = Self {
+//         //     selection: Selection::Defaulted(s),
+//         //     cur: Some(s),
+//         //     err: None,
+//         //     context: "",
+//         // };
+//         // cur.log_success("Cursor::from", "");
+//         // cur
+//     }
+// }
+
+
+
 impl<'a> TryFrom<Cursor<'a>> for &'a str {
     type Error = ParseError;
 
@@ -54,6 +72,14 @@ impl<'a> TryFrom<Cursor<'a>> for &'a str {
         value.str()
     }
 }
+
+// impl<'a> TryFrom<&'a Cursor<'a>> for &'a str {
+//     type Error = ParseError;
+
+//     fn try_from(value: &'a Cursor<'a>) -> Result<Self, Self::Error> {
+//         value.str()
+//     }
+// }
 
 impl<'a> fmt::Display for Selection<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
