@@ -266,6 +266,19 @@ pub trait Selectable<'a>: Matchable<'a> {
         (self, None)
     }
 
+    fn parse_opt_selection_as_str(self) -> (Self, Option<Option<&'a str>>) {
+        self.log_inputs("parse_selection_as_str", "");
+        if let Ok(text) = self.get_selection() {
+            if let Ok(_cur) = self.str() {
+                self.log_success_with_result("parse_selection_as_str", "", &text);
+                return (self, Some(Some(text)));
+            } else {
+                return (self, Some(None));
+            }
+        }
+        (self, None)
+    }
+
     // fn parse_selection_as_f64(self) -> Result<Self::TupleReturn<f64>, ParseError> {
     //     let text = self.get_selection()?;
     //     let cur = self.str()?;
@@ -363,7 +376,7 @@ pub trait Matchable<'a>: Sized {
     // type Raw;
     // type CursorWithSelection: Cursor<'a>;
 
-    type Cursor;
+    type Cursor: Matchable<'a>;
     type DeTuple;
 
     fn cursor(&self) -> &Self::Cursor;
@@ -681,9 +694,66 @@ pub trait Matchable<'a>: Sized {
         (self, None)
     }
 
+    // fn parse_with<P, C, T>(self, parser: P) -> (Self, Option<T>)
+    // where
+    //     P: crate::parser::Parser<'a, C, T, Error=ParseError>,
+    //     Self::Cursor: Clone,
+    //     Self::Cursor: TryInto<C> + From<C>,
+    //     C: TryInto<&'a str>
+    //     // alternative:
+    //     // P: FnMut(C) -> Result<(C, T), ParseError>,
+    //     // Self::Cursor: Clone,
+    //     // Self::Cursor: TryInto<C> + From<C>,
+    //     // C: TryInto<&'a str>,
+    //     // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+    //     // <Self as Matchable<'a>>::Cursor: 'a,
+    // {
+    //     if !self.is_skip() {
+    //         let res = crate::parser::invoke_parser(self.cursor().clone(), parser);
+    //         match res {
+    //             Ok((_c,t)) => (self, Some(t)),
+    //             Err(_e) => (self, None),
+    //         }
+    //     } else {
+    //         (self, None)
+    //     }
+    // }
+
+    fn parse_opt_with<P, C, T>(self, mut parser: P) -> (Self, Option<Option<T>>)
+    where
+        P: crate::parser::Parser<'a, C, T, Error = ParseError>,
+        Self::Cursor: Clone,
+        Self::Cursor: TryInto<C> + From<C>,
+        C: TryInto<&'a str>,
+        // alternative:
+        // P: FnMut(C) -> Result<(C, T), ParseError>,
+        // Self::Cursor: Clone,
+        // Self::Cursor: TryInto<C> + From<C>,
+        // C: TryInto<&'a str>,
+        // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+        // <Self as Matchable<'a>>::Cursor: 'a,
+    {
+        if !self.is_skip() {
+            let res: Result<(C, T), ParseError> = parser.parse(
+                self.cursor()
+                    .clone()
+                    .try_into()
+                    .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
+            );
+            return match res {
+                Ok((cur_c, t)) => match cur_c.try_into() {
+                    Ok(s) => (self.set_str(s), Some(Some(t))),
+                    Err(_e) => (self, Some(None)),
+                },
+                Err(_e) => (self, Some(None)),
+            };
+        }
+        (self, None)
+    }
+
     fn parse_with<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
     where
-        P: crate::parser::Parser<'a, C, T, Error=ParseError>,
+        P: crate::parser::Parser<'a, C, T, Error = ParseError>,
         Self::Cursor: Clone,
         Self::Cursor: TryInto<C> + From<C>,
         C: TryInto<&'a str>,
@@ -718,9 +788,6 @@ pub trait Matchable<'a>: Sized {
         }
         (self, None)
     }
-
-
-
 
     // fn parse_with<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
     // where
@@ -760,18 +827,6 @@ pub trait Matchable<'a>: Sized {
     //     (self, None)
     // }
 
-
-
-
-
-
-
-
-
-
-
-
-
     // { P, P, P, }
     // { P, P, P }
     // P, P, P
@@ -783,7 +838,6 @@ pub trait Matchable<'a>: Sized {
 
     // parse_opt_with(F) => Option<T>
     // parse_vec_with(1..,  F) => Vec<T>
-
 
     // fn parse_put<P, T>(self, mut parser: P, dest: &mut T) -> Result<Self, ParseError>
     // where

@@ -7,34 +7,34 @@ pub trait Parser<'c, C, T> {
     fn parse(&mut self, s: C) -> Result<(C, T), Self::Error>;
 }
 
-fn invoke_parser<'a, P, C, T>(cur: Cursor<'a>, mut parser: P) -> Result<(Cursor<'a>, T), P::Error>
-where
-    P: Parser<'a, C, T, Error = ParseError>,
-    // C2: TryInto<C> + From<C>,
-    C: TryFrom<Cursor<'a>> + Into<Cursor<'a>>,
-    C: TryInto<&'a str, Error = ParseError>,
-    // alternative:
-    // P: FnMut(C) -> Result<(C, T), ParseError>,
-    // Self::Cursor: Clone,
-    // Self::Cursor: TryInto<C> + From<C>,
-    // C: TryInto<&'a str>,
-    // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
-    // <Self as Matchable<'a>>::Cursor: 'a,
-{
-    let res: Result<(C, T), ParseError> = parser.parse(
-        cur.cursor()
-            .clone()
-            .try_into()
-            .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
-    );
-    return match res {
-        Ok((cur_c, t)) => match cur_c.try_into() {
-            Ok(s) => Ok((cur.set_str(s), t)),
-            Err(e) => Err(e),
-        },
-        Err(e) => Err(e),
-    };
-}
+// pub fn invoke_parser<'a, P, C, C2, T>(cur: C2, mut parser: P) -> Result<(C2, T), P::Error>
+// where
+//     P: Parser<'a, C, T, Error = ParseError>,
+//     // C2: TryInto<C> + From<C>,
+//     C: Into<C2>,
+//     C: TryInto<&'a str>,
+//     C2: Clone + Matchable<'a> + TryInto<C>
+//     // alternative:
+//     // P: FnMut(C) -> Result<(C, T), ParseError>,
+//     // Self::Cursor: Clone,
+//     // Self::Cursor: TryInto<C> + From<C>,
+//     // C: TryInto<&'a str>,
+//     // C: TryFrom<&'a <Self as Matchable<'a>>::Cursor>,
+//     // <Self as Matchable<'a>>::Cursor: 'a,
+// {
+//     let res: Result<(C, T), ParseError> = parser.parse(
+//         cur.clone()
+//             .try_into()
+//             .unwrap_or_else(|_| panic!("Unexpected cursor() unwrap on valid cursor")),
+//     );
+//     return match res {
+//         Ok((cur_c, t)) => match cur_c.try_into() {
+//             Ok(s) => Ok((cur.set_str(s), t)),
+//             Err(_e) => Err(ParseError::NoMatch { action: "try_into", args: "" }),
+//         },
+//         Err(e) => Err(e),
+//     };
+// }
 
 pub type StrFunc<T, E> = for<'c> fn(&'c str) -> Result<(&'c str, T), E>;
 pub type StrMethod<T, X> = for<'c> fn(x: &'c X, &'c str) -> Result<(&'c str, T), ParseError>;

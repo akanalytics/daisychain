@@ -89,6 +89,7 @@ pub mod ch_4_enum_handcrafted;
 pub mod ch_5_enum_strum;
 pub mod ch_6_enum_variant;
 pub mod ch_7_alternate;
+pub mod ch_8_alternate_opt;
 pub mod ch_8_composition;
 pub mod ch_9_parser_api;
 
