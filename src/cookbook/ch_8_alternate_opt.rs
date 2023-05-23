@@ -6,6 +6,28 @@ use strum_macros::{EnumString, EnumVariantNames};
 
 use super::ch_7_alternate::parse_time;
 
+#[derive(PartialEq, Debug)]
+pub enum OneChar {
+    Digit(u32),
+    Letter(char),
+}
+
+pub fn parse_char(s: &str) -> Result<(&str, OneChar), ParseError> {
+    let (c, opt_digit, opt_letter) = Cursor::from(s)
+        .chars_any(1..=1)
+        .parse_opt_selection::<u32>()
+        .parse_opt_selection::<char>()
+        .validate()?;
+    let one_char = match (opt_digit, opt_letter) {
+        // order important, and note "_" since a digit also a letter
+        (Some(d), _) => OneChar::Digit(d), 
+        (None, Some(c)) => OneChar::Letter(c),
+        _ => unreachable!(),
+    };
+
+    Ok((c.str()?, one_char))
+}
+
 #[derive(PartialEq, Debug, EnumVariantNames, EnumString)]
 pub enum Day {
     Mon,
@@ -59,6 +81,19 @@ pub fn parse_event(s: &str) -> Result<(&str, Event), ParseError> {
 mod tests {
     use super::*;
     use test_log::test;
+
+    #[test]
+    fn test_onechar() -> Result<(), ParseError> {
+        use OneChar::*;
+        assert_eq!(parse_char("1")?.1, Digit(1));
+        assert_eq!(parse_char("A")?.1, Letter('A'));
+        assert_eq!(parse_char("").is_err(), true);
+
+        // check that the cursor is left at the right terminating position
+        assert_eq!(parse_char("1X")?.0, "X");
+        assert_eq!(parse_char("AY")?.0, "Y");
+        Ok(())
+    }
 
     #[test]
     fn test_event() -> Result<(), ParseError> {

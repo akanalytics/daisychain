@@ -255,6 +255,33 @@ pub trait Selectable<'a>: Matchable<'a> {
         (self, None)
     }
 
+    fn parse_opt_selection<T: FromStr + Debug>(self) -> (Self, Option<Option<T>>) {
+        self.log_inputs("parse_selection", std::any::type_name::<T>());
+        if let Ok(text) = self.get_selection() {
+            if let Ok(_cur) = self.str() {
+                return match text.parse::<T>() {
+                    Ok(t) => {
+                        self.log_success_with_result(
+                            "get_opt_selection",
+                            std::any::type_name::<T>(),
+                            &t,
+                        );
+                        (self, Some(Some(t)))
+                    }
+                    Err(..) => {
+                        self.log_success_with_result(
+                            "get_opt_selection",
+                            std::any::type_name::<T>(),
+                            "None",
+                        );
+                        (self, Some(None))
+                    }
+                };
+            }
+        }
+        (self, None)
+    }
+
     fn parse_selection_as_str(self) -> (Self, Option<&'a str>) {
         self.log_inputs("parse_selection_as_str", "");
         if let Ok(text) = self.get_selection() {
@@ -266,18 +293,18 @@ pub trait Selectable<'a>: Matchable<'a> {
         (self, None)
     }
 
-    fn parse_opt_selection_as_str(self) -> (Self, Option<Option<&'a str>>) {
-        self.log_inputs("parse_selection_as_str", "");
-        if let Ok(text) = self.get_selection() {
-            if let Ok(_cur) = self.str() {
-                self.log_success_with_result("parse_selection_as_str", "", &text);
-                return (self, Some(Some(text)));
-            } else {
-                return (self, Some(None));
-            }
-        }
-        (self, None)
-    }
+    // fn parse_opt_selection_as_str(self) -> (Self, Option<Option<&'a str>>) {
+    //     self.log_inputs("parse_selection_as_str", "");
+    //     if let Ok(text) = self.get_selection() {
+    //         if let Ok(_cur) = self.str() {
+    //             self.log_success_with_result("parse_selection_as_str", "", &text);
+    //             return (self, Some(Some(text)));
+    //         } else {
+    //             return (self, Some(None));
+    //         }
+    //     }
+    //     (self, None)
+    // }
 
     // fn parse_selection_as_f64(self) -> Result<Self::TupleReturn<f64>, ParseError> {
     //     let text = self.get_selection()?;
