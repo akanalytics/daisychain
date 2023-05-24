@@ -179,7 +179,7 @@ where
 //     pd: PhantomData<&'a ()>,
 // }
 
-impl<'a, P1, P2> Parser<'a> for Chain<'a, P1, P2, (), (), ()>
+impl<'a, P1, P2, T0, T1, T2> Parser<'a> for Chain<'a, P1, P2, T0, T1, T2>
 where
     P1: Parser<'a>,
     P2: Parser<'a, Input = P1::Input, Error = P1::Error>,
@@ -190,7 +190,7 @@ where
     fn name(&self, indent: &str) -> String {
         let indent = indent.replace("└──", "|  ");
         format!(
-            "{indent}chain00\n{s}\n{t}\n{indent}",
+            "{indent}chain\n{s}\n{t}\n{indent}",
             // s = std::any::type_name::<P1>(),
             s = self.p1.name(&format!("{indent}└──")),
             // t = std::any::type_name::<P2>(),
@@ -226,22 +226,22 @@ pub struct Chain<'a, S, T, S0, S1, S2>
     pd2: PhantomData<S2>,
 }
 
-impl<'a, S, T, S0, S1, S2> Chain<'a, S, T, S0, S1, S2>
-where
-    S: Parser<'a>,
-    T: Parser<'a, Input = S::Input, Error = S::Error>,
-{
-    fn name(&self, indent: &str) -> String {
-        let indent = indent.replace("└──", "|  ");
-        format!(
-            "{indent}chain00\n{s}\n{t}\n{indent}",
-            // s = std::any::type_name::<P1>(),
-            s = self.p1.name(&format!("{indent}└──")),
-            // t = std::any::type_name::<P2>(),
-            t = self.p2.name(&format!("{indent}└──")),
-        )
-    }
-}
+// impl<'a, S, T, S0, S1, S2> Chain<'a, S, T, S0, S1, S2>
+// where
+//     S: Parser<'a>,
+//     T: Parser<'a, Input = S::Input, Error = S::Error>,
+// {
+//     fn name(&self, indent: &str) -> String {
+//         let indent = indent.replace("└──", "|  ");
+//         format!(
+//             "{indent}chain\n{s}\n{t}\n{indent}",
+//             // s = std::any::type_name::<P1>(),
+//             s = self.p1.name(&format!("{indent}└──")),
+//             // t = std::any::type_name::<P2>(),
+//             t = self.p2.name(&format!("{indent}└──")),
+//         )
+//     }
+// }
 
 impl<'a, S, T, S0> ParserT1<'a, S0> for Chain<'a, S, T, S0, (), ()>
 where
@@ -292,7 +292,7 @@ impl<'a> ParserT0<'a> for SP {
 #[cfg(test)]
 mod tests {
     use crate::{
-        combo::{ParserT0, ParserT1, SP},
+        combo::{ParserT0, ParserT1, SP, Parser},
         prelude::dc::ParseError,
     };
 
