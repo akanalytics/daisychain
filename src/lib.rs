@@ -17,6 +17,7 @@ mod cursor;
 mod error;
 mod text_parser;
 mod util;
+mod combo;
 
 pub mod prelude;
 
