@@ -24,13 +24,6 @@ pub trait Parser<'a>: Sized {
 }
 
 pub trait ParserT0<'a>: Parser<'a> {
-    fn name(&self, indent: &str) -> String {
-        format!(
-            "{indent}parser({input}) -> Result<(), {error}>",
-            input = std::any::type_name::<Self::Input>(),
-            error = std::any::type_name::<Self::Error>()
-        )
-    }
     fn parse(&mut self, inp: Self::Input) -> Result<Self::Input, Self::Error>;
     fn chain_lex<P2: ParserT0<'a>>(self, p2: P2) -> Chain<'a, Self, P2, (), (), ()>
     where
@@ -195,12 +188,13 @@ where
     type Error = P1::Error;
 
     fn name(&self, indent: &str) -> String {
+        let indent = indent.replace("└──", "|  ");
         format!(
-            "{indent}chain00\n{s}\n{t}",
+            "{indent}chain00\n{s}\n{t}\n{indent}",
             // s = std::any::type_name::<P1>(),
-            s = self.p1.name(&format!("{indent}  ")),
+            s = self.p1.name(&format!("{indent}└──")),
             // t = std::any::type_name::<P2>(),
-            t = self.p2.name(&format!("{indent}  ")),
+            t = self.p2.name(&format!("{indent}└──")),
         )
     }
 }
@@ -238,12 +232,13 @@ where
     T: Parser<'a, Input = S::Input, Error = S::Error>,
 {
     fn name(&self, indent: &str) -> String {
+        let indent = indent.replace("└──", "|  ");
         format!(
-            "{indent}chain10\n{s}\n{t}",
-            // s = std::any::type_name::<S>(),
-            s = self.p1.name(&format!("{indent}  ")),
-            // t = std::any::type_name::<T>(),
-            t = self.p2.name(&format!("{indent}  ")),
+            "{indent}chain00\n{s}\n{t}\n{indent}",
+            // s = std::any::type_name::<P1>(),
+            s = self.p1.name(&format!("{indent}└──")),
+            // t = std::any::type_name::<P2>(),
+            t = self.p2.name(&format!("{indent}└──")),
         )
     }
 }
@@ -312,7 +307,6 @@ mod tests {
         fn ws<'a>(s: &'a str) -> Result<&'a str, ParseError> {
             Ok(s.trim_start())
         }
-
 
         fn num_parser<'a>(s: &'a str) -> Result<(&'a str, i32), ParseError> {
             Ok((&s[1..], s[0..=0].parse::<i32>()?))
