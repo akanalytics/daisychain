@@ -22,15 +22,18 @@ pub trait ParserT0<'a>: Sized {
         )
     }
     fn parse(&mut self, inp: Self::Input) -> Result<Self::Input, Self::Error>;
-    fn chain_lex<P2: ParserT0<'a>>(self, p2: P2) -> Chain00<'a, Self, P2>
+    fn chain_lex<P2: ParserT0<'a>>(self, p2: P2) -> Chain30<'a, Self, P2, (), (), ()>
     where
         Self: ParserT0<'a>,
         P2: ParserT0<'a, Input = Self::Input, Error = Self::Error>,
     {
-        Chain00 {
+        Chain30 {
             p1: self,
             p2,
-            pd: Default::default(),
+            pdlt: Default::default(),
+            pd0: Default::default(),
+            pd1: Default::default(),
+            pd2: Default::default(),
         }
     }
 }
@@ -154,17 +157,17 @@ where
     }
 }
 
-pub struct Chain00<'a, P1, P2>
-where
-    P1: ParserT0<'a>,
-    P2: ParserT0<'a, Input = P1::Input, Error = P1::Error>,
-{
-    p1: P1,
-    p2: P2,
-    pd: PhantomData<&'a ()>,
-}
+// pub struct Chain00<'a, P1, P2>
+// // where
+// //     P1: ParserT0<'a>,
+// //     P2: ParserT0<'a, Input = P1::Input, Error = P1::Error>,
+// {
+//     p1: P1,
+//     p2: P2,
+//     pd: PhantomData<&'a ()>,
+// }
 
-impl<'a, P1, P2> ParserT0<'a> for Chain00<'a, P1, P2>
+impl<'a, P1, P2> ParserT0<'a> for Chain30<'a, P1, P2, (), (), ()>
 where
     P1: ParserT0<'a>,
     P2: ParserT0<'a, Input = P1::Input, Error = P1::Error>,
@@ -191,9 +194,9 @@ where
 }
 
 pub struct Chain30<'a, S, T, S0, S1, S2>
-where
-    S: ParserT1<'a, S0>,
-    T: ParserT0<'a, Input = S::Input, Error = S::Error>,
+// where
+//     S: ParserT1<'a, S0>,
+//     T: ParserT0<'a, Input = S::Input, Error = S::Error>,
 {
     p1: S,
     p2: T,
