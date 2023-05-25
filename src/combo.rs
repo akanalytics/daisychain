@@ -24,10 +24,10 @@ pub trait Parser<'a, T>: Sized {
 
     fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input,T), Self::Error>;
 
-    fn chain_lex<P2: Parser<'a, ()>>(self, p2: P2) -> Chain<'a, Self, P2>
+    fn chain_lex<P2: Parser<'a, Lex<()>>>(self, p2: P2) -> Chain<'a, Self, P2>
     where
         Self: Parser<'a, T>,
-        P2: Parser<'a, (), Input = Self::Input,  Error = Self::Error>,
+        P2: Parser<'a, Lex<()>, Input = Self::Input,  Error = Self::Error>,
     {
         Chain {
             p1: self,
@@ -64,10 +64,11 @@ pub struct Chain<'a, P1, P2>
 
 
 
-impl<'a, P1, P2, S> Parser<'a, S> for Chain<'a, P1, P2>
+
+impl<'a, P1, P2, S, T> Parser<'a, (S,T)> for Chain<'a, P1, P2>
 where
     P1: Parser<'a, S>,
-    P2: Parser<'a, (), Input = P1::Input, Error = P1::Error>,
+    P2: Parser<'a, T, Input = P1::Input, Error = P1::Error>,
 {
     type Input = P1::Input;
     type Error = P1::Error;
@@ -83,13 +84,36 @@ where
         )
     }
 
-    // P1: T0 -> (T0, (T1, T2))
-    // P2: T0 -> T0
-    // return P1(T0), (T1, T2))
-    fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input,S), Self::Error> {
+//
+//  (str)  -> (str, (S) 
+//  (str)  -> (str, Lex())
+//  -----
+//  (str) ->  (str, (S, Lex))
+//  (str) ->  (str, S)
+//
+//
+// 
+//  (str)  -> (str, S) 
+//  (str)  -> (str, Par(T))
+//  -----
+//  (str) ->  (str, (S, Par<T>))
+//
+//
+//  (str)  -> (str, (S0, S1)) 
+//  (str)  -> (str, T)
+//  -----
+//  (str) ->  (str, ((S0,S1), T))
+//
+//
+//  (str)  -> (str, ((S0, S1), S2)) 
+//  (str)  -> (str, T)
+//  -----
+//  (str) ->  (str, (((S0,S1), S2), T))
+
+    fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input,(S,T)), Self::Error> {
         let (io1, o1) : (Self::Input,S) = self.p1.parse(inp)?;
-        let o2 : Result<(P1::Input ,S), P2::Error> = match self.p2.parse(io1) {
-            Ok((io2,())) => Ok((io2,o1)),
+        let o2 : Result<(P1::Input ,(S,T)), P2::Error> = match self.p2.parse(io1) {
+            Ok((io2,t)) => Ok((io2,(o1,t))),
             Err(e) => Err(e),
         };
         o2
@@ -97,6 +121,32 @@ where
 }
 
 
+impl<S> DeTuple for (S,Lex<()>) {
+    type Output = S;
+
+    fn detuple(self) -> Self::Output {
+        let (s,_) = self;
+        s
+    }
+}
+
+
+impl<A,B> DeTuple for  (A,Par<B>) {
+    type Output = (A,Par<B>);
+
+    fn detuple(self) -> Self::Output {
+        self
+    }
+}
+
+
+// impl<A,B,C> DeTuple for  ((A,B),Par<C>) {
+//     type Output = ((A,B),Par<C>);
+
+//     fn detuple(self) -> Self::Output {
+//         self
+//     }
+// }
 
 
 
@@ -206,8 +256,39 @@ where
 //     }
 // }
 
+#[derive(Debug, PartialEq)]
+pub struct Lex<T>(T);
 
-impl<'a, F2, T> Parser<'a, T> for F2
+#[derive(Debug, PartialEq)]
+pub struct Par<T>(T);
+
+
+impl<'a, F2> Parser<'a, Lex<()>> for Lex<F2>
+where
+    F2: FnMut(&'a str) -> Result<&'a str, ParseError>,
+{
+    type Error = ParseError;
+    type Input = &'a str;
+    fn name(&self, indent: &str) -> String {
+        format!(
+            "{indent}Lex {func}({input}) -> Result<({input}, {t}), {error}>",
+            func = type_suffix(std::any::type_name::<Self>()),
+            t = type_suffix(std::any::type_name::<()>()),
+            input = std::any::type_name::<Self::Input>(),
+            error = type_suffix(std::any::type_name::<Self::Error>())
+        )
+    }
+    fn parse(&mut self, s: &'a str) -> Result<(&'a str, Lex<()>), ParseError> {
+        // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
+        let Lex(func) = self;
+        match (func)(s) {
+            Ok(s) => Ok((s, Lex(()))),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+impl<'a, F2, T> Parser<'a, Par<T>> for Par<F2>
 where
     F2: FnMut(&'a str) -> Result<(&'a str, T), ParseError>,
 {
@@ -215,19 +296,22 @@ where
     type Input = &'a str;
     fn name(&self, indent: &str) -> String {
         format!(
-            "{indent}ParserT1 {func}({input}) -> Result<({input}, {t}), {error}>",
+            "{indent}Par {func}({input}) -> Result<({input}, {t}), {error}>",
             func = type_suffix(std::any::type_name::<Self>()),
             t = type_suffix(std::any::type_name::<T>()),
             input = std::any::type_name::<Self::Input>(),
             error = type_suffix(std::any::type_name::<Self::Error>())
         )
     }
-    fn parse(&mut self, s: &'a str) -> Result<(&'a str, T), ParseError> {
+    fn parse(&mut self, s: &'a str) -> Result<(&'a str, Par<T>), ParseError> {
         // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
-        (self)(s)
+        let Par(func) = self;
+        match (func)(s) {
+            Ok((s, t)) => Ok((s, Par(t))),
+            Err(e) => Err(e),
+        }
     }
 }
-
 
 struct SP;
 
@@ -284,7 +368,7 @@ impl<A, B, C, D> DeTuple for (A, (B, (C, D, ()))) {
 mod tests {
     use super::DeTuple;
     use crate::{
-        combo::{Parser, SP},
+        combo::{Parser, SP, Lex, Par},
         prelude::dc::ParseError,
     };
     #[test]
@@ -297,12 +381,12 @@ mod tests {
     fn test_combo() {
         // define a simple lexer+parser
         assert_eq!(SP.parse("cat").unwrap().0, "cat");
-        fn tail_parser<'a>(s: &'a str) -> Result<(&'a str, ()), ParseError> {
-            Ok((&s[1..], ()))
+        fn tail_lexer<'a>(s: &'a str) -> Result<&'a str, ParseError> {
+            Ok(&s[1..])
         }
 
-        fn ws<'a>(s: &'a str) -> Result<(&'a str, ()), ParseError> {
-            Ok((s.trim_start(), ()))
+        fn ws<'a>(s: &'a str) -> Result<&'a str, ParseError> {
+            Ok(s.trim_start())
         }
 
         fn num_parser<'a>(s: &'a str) -> Result<(&'a str, i32), ParseError> {
@@ -312,31 +396,31 @@ mod tests {
         struct StructEx;
 
         let mut parser1 = SP
-            .chain_lex(tail_parser)
-            .chain_lex(ws)
-            .chain_lex(tail_parser);
+            .chain_lex(Lex(tail_lexer))
+            .chain_lex(Lex(ws))
+            .chain_lex(Lex(tail_lexer));
 
         let parser2 = SP
-            .chain_lex(|s| tail_parser(s))
-            .chain_lex(ws)
-            .chain_lex(tail_parser);
+            .chain_lex(Lex(|s| tail_lexer(s)))
+            .chain_lex(Lex(ws))
+            .chain_lex(Lex(tail_lexer));
 
         let s = parser1.parse("c   t2dog").unwrap();
         assert_eq!(s.0, "2dog");
         println!("{}", parser1.name(""));
         println!("{}", parser2.name(""));
 
-        let mut parser3 = SP.make_parser(num_parser);
+        let mut parser3 = SP.make_parser(Par(num_parser));
         println!("{}", parser3.name(""));
 
         let (s, d) = parser3.parse("5dog").unwrap();
         assert_eq!(s, "dog");
-        assert_eq!(d, 5);
+        assert_eq!(d, Par(5));
 
-        let mut parser4 = parser3.chain_lex(parser1);
+        let mut parser4 = parser3.chain_parser(parser1);
         let (s, d) = parser4.parse("6d   gs").unwrap();
         assert_eq!(s, "s");
-        assert_eq!(d, 6);
+        assert_eq!(format!("{:?}", d), "(Par(6), ((((), Lex(())), Lex(())), Lex(())))");
         println!("{}", parser4.name(""));
 
         // let mut parser5 = parser4.chain_parser(num_parser);
