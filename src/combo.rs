@@ -21,6 +21,20 @@ pub trait Parser<'a>: Sized {
             error = std::any::type_name::<Self::Error>()
         )
     }
+
+    // fn chain<P2: ParserT0<'a>>(self, p2: P2) -> Chain<'a, Self, P2, T0, T1, T2>
+    // where
+    //     P2: ParserT0<'a, Input = Self::Input, Error = Self::Error>;
+
+    // fn chain_lex<P2: ParserT0<'a>>(self, p2: P2) -> Chain<'a, Self, P2, (), (), ()>;
+
+    // fn ws<P2: ParserT0<'a>>(self) -> Chain<'a, Self, P2, (), (), ()> {
+    //     fn func_ws<'a>(s: &'a str) -> Result<&'a str, ParseError> {
+    //         Ok(s.trim_start())
+    //     }
+
+    //     self.chain_lex(|c| func_ws(c))
+    // }
 }
 
 pub trait ParserT0<'a>: Parser<'a> {
@@ -54,7 +68,7 @@ pub trait ParserT1<'a, T0>: Sized {
         )
     }
     fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input, T0), Self::Error>;
-    fn chain_lex2<P2: ParserT0<'a>>(self, p2: P2) -> Chain<'a, Self, P2, T0, (), ()>
+    fn chain_lex<P2: ParserT0<'a>>(self, p2: P2) -> Chain<'a, Self, P2, T0, (), ()>
     where
         //     // Self: ParserT0<'a>,
         P2: ParserT0<'a, Input = Self::Input, Error = Self::Error>,
@@ -289,12 +303,46 @@ impl<'a> ParserT0<'a> for SP {
     }
 }
 
+
+
+/// (a, (b,c)) -> (a,b,c)
+/// (a, (b, (c,d))) -> 
+
+trait DeTuple {
+    type Output;
+    fn detuple(self) -> Self::Output;
+}
+
+impl<A, B, C> DeTuple for (A, (B, C, ())) {
+    type Output = (A, B, C);
+
+    fn detuple(self) -> Self::Output {
+        (self.0, (self.1).0, (self.1).1)
+    }
+}
+
+impl<A, B, C, D> DeTuple for (A, (B, (C, D, ()))) {
+    type Output = (A, B, C, D);
+
+    fn detuple(self) -> Self::Output {
+        (self.0, self.1.0, self.1.1.0, self.1.1.1)
+    }
+}
+
+
+
 #[cfg(test)]
 mod tests {
+    use super::DeTuple;
     use crate::{
-        combo::{ParserT0, ParserT1, SP, Parser},
+        combo::{Parser, ParserT0, ParserT1, SP},
         prelude::dc::ParseError,
     };
+    #[test]
+    fn test_detuple() {
+        println!("{:?}", (1, (2, 3, ())).detuple());
+        println!("{:?}", (1, (2, (3, 4, ()))).detuple());
+    }
 
     #[test]
     fn test_combo() {
@@ -336,7 +384,7 @@ mod tests {
         assert_eq!(s, "dog");
         assert_eq!(d, 5);
 
-        let mut parser4 = parser3.chain_lex2(parser1);
+        let mut parser4 = parser3.chain_lex(parser1);
         let (s, d) = parser4.parse("6d   gs").unwrap();
         assert_eq!(s, "s");
         assert_eq!(d, 6);
