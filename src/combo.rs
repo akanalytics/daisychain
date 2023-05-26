@@ -10,8 +10,9 @@ fn type_suffix(type_name: &str) -> &str {
     }
 }
 
-pub trait Parser<'a, T>: Sized {
+pub trait Parser<'a>: Sized {
     type Input;
+    type Output;
     type Error;
 
     fn name(&self, indent: &str) -> String {
@@ -22,29 +23,31 @@ pub trait Parser<'a, T>: Sized {
         )
     }
 
-    fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input,T), Self::Error>;
+    fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input, Self::Output), Self::Error>;
 
-    fn chain_lex<P2: Parser<'a, Lex<()>>>(self, p2: P2) -> Chain<'a, Self, P2>
+    // fn results(&mut self, inp: Self::Input) -> Result<(Self::Input,<T as DeTuple>::Output), Self::Error> where T: DeTuple {
+    //     self.parse(inp).map(|(i,t)| (i,t.detuple()))
+    // }
+
+    fn chain_lex<P2: Parser<'a, Output=Lex<()>>>(self, p2: P2) -> Chain<'a, Self, P2,>
     where
-        Self: Parser<'a, T>,
-        P2: Parser<'a, Lex<()>, Input = Self::Input,  Error = Self::Error>,
+        P2: Parser<'a, Output=Lex<()>, Input = Self::Input, Error = Self::Error>,
     {
         Chain {
             p1: self,
             p2,
-            pdlt: Default::default()
+            pdlt: Default::default(),
         }
     }
 
-    fn chain_parser<S, P2: Parser<'a, S>>(self, p2: P2) -> Chain<'a, Self, P2>
+    fn chain_parser<S, P2: Parser<'a, Output=S>>(self, p2: P2) -> Chain<'a, Self, P2,>
     where
-        Self: Parser<'a, T>,
-        P2: Parser<'a, S, Input = Self::Input, Error = Self::Error>,
+        P2: Parser<'a, Output=S, Input = Self::Input, Error = Self::Error>,
     {
         Chain {
             p1: self,
             p2,
-            pdlt: Default::default()
+            pdlt: Default::default(),
         }
     }
 }
@@ -57,21 +60,22 @@ pub struct Chain<'a, P1, P2>
     p1: P1,
     p2: P2,
     pdlt: PhantomData<&'a ()>,
-    // pd0: PhantomData<S0>,
-    // pd1: PhantomData<S1>,
+    // pd0: PhantomData<S1>,
+    // pd1: PhantomData<S2>,
     // pd2: PhantomData<S2>,
 }
 
 
 
-
-impl<'a, P1, P2, S, T> Parser<'a, (S,T)> for Chain<'a, P1, P2>
+impl<'a, P1, P2, T> Parser<'a, > for Chain<'a, P1, P2>
 where
-    P1: Parser<'a, S>,
-    P2: Parser<'a, T, Input = P1::Input, Error = P1::Error>,
+    P1: Parser<'a>,
+    P2: Parser<'a, Output = T, Input = P1::Input, Error = P1::Error>,
+    (P1::Output, P2::Output): ConcatTuple,
 {
     type Input = P1::Input;
     type Error = P1::Error;
+    type Output = <(P1::Output, P2::Output) as ConcatTuple>::Output;
 
     fn name(&self, indent: &str) -> String {
         let indent = indent.replace("└──", "|  ");
@@ -84,175 +88,85 @@ where
         )
     }
 
-//
-//  (str)  -> (str, (S) 
-//  (str)  -> (str, Lex())
-//  -----
-//  (str) ->  (str, (S, Lex))
-//  (str) ->  (str, S)
-//
-//
-// 
-//  (str)  -> (str, S) 
-//  (str)  -> (str, Par(T))
-//  -----
-//  (str) ->  (str, (S, Par<T>))
-//
-//
-//  (str)  -> (str, (S0, S1)) 
-//  (str)  -> (str, T)
-//  -----
-//  (str) ->  (str, ((S0,S1), T))
-//
-//
-//  (str)  -> (str, ((S0, S1), S2)) 
-//  (str)  -> (str, T)
-//  -----
-//  (str) ->  (str, (((S0,S1), S2), T))
+    //
+    //  (str)  -> (str, (S)
+    //  (str)  -> (str, Lex())
+    //  -----
+    //  (str) ->  (str, (S, Lex))
+    //  (str) ->  (str, S)
+    //
+    //
+    //
+    //  (str)  -> (str, S)
+    //  (str)  -> (str, Par(T))
+    //  -----
+    //  (str) ->  (str, (S, Par<T>))
+    //
+    //
+    //  (str)  -> (str, (S0, S1))
+    //  (str)  -> (str, T)
+    //  -----
+    //  (str) ->  (str, ((S0,S1), T))
+    //
+    //
+    //  (str)  -> (str, ((S0, S1), S2))
+    //  (str)  -> (str, T)
+    //  -----
+    //  (str) ->  (str, (((S0,S1), S2), T))
 
-    fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input,(S,T)), Self::Error> {
-        let (io1, o1) : (Self::Input,S) = self.p1.parse(inp)?;
-        let o2 : Result<(P1::Input ,(S,T)), P2::Error> = match self.p2.parse(io1) {
-            Ok((io2,t)) => Ok((io2,(o1,t))),
-            Err(e) => Err(e),
-        };
+    fn parse(
+        &mut self,
+        inp: Self::Input,
+    ) -> Result<(Self::Input, Self::Output), Self::Error> {
+        let (io1, o1): (Self::Input, P1::Output) = self.p1.parse(inp)?;
+        let o2: Result<(P1::Input, Self::Output), P2::Error> =
+            match self.p2.parse(io1) {
+                Ok((io2, t)) => Ok((io2, ConcatTuple::concat((o1, t)))),
+                Err(e) => Err(e),
+            };
         o2
     }
 }
 
+pub trait ConcatTuple {
+    type Output;
+    fn concat(self) -> Self::Output;
+}
 
-impl<S> DeTuple for (S,Lex<()>) {
-    type Output = S;
+// struct IO<I,O>{ i:I, o:O }
 
-    fn detuple(self) -> Self::Output {
-        let (s,_) = self;
-        s
+
+
+// impl<T0, T1, S> ConcatTuple for (T0, T1, Lex<S>) {
+//     type Output = (T0, T1, S);
+
+//     fn concat(self) -> Self::Output {
+//         let (t0, t1, Lex(s)) = self;
+//         (t0, t1, s)
+//     }
+// }
+
+impl<T0, S> ConcatTuple for (T0, Lex<S>) {
+    type Output = (T0, S);
+    fn concat(self) -> Self::Output {
+        let (t0, Lex(s)) = self;
+        (t0, s)
     }
 }
 
-
-impl<A,B> DeTuple for  (A,Par<B>) {
-    type Output = (A,Par<B>);
-
-    fn detuple(self) -> Self::Output {
-        self
-    }
-}
-
-
-// impl<A,B,C> DeTuple for  ((A,B),Par<C>) {
-//     type Output = ((A,B),Par<C>);
-
-//     fn detuple(self) -> Self::Output {
-//         self
+// impl<T0, T1, S> ConcatTuple for (T0, T1, Par<S>) {
+//     type Output = (T0, T1, S);
+//     fn concat(self) -> Self::Output {
+//         let (t0, t1, Par(s)) = self;
+//         (t0, t1, s)
 //     }
 // }
 
-
-
-
-// pub trait ParserT0<'a>: Parser<'a> {}
-
-// pub trait ParserT1<'a, T0>: Sized {
-//     type Input;
-//     type Error;
-
-//     fn name(&self, indent: &str) -> String {
-//         format!(
-//             "{indent}parser({input}) -> Result<({input},{t0}), {error}>",
-//             input = std::any::type_name::<Self::Input>(),
-//             t0 = std::any::type_name::<T0>(),
-//             error = std::any::type_name::<Self::Error>()
-//         )
-//     }
-//     fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input, T0), Self::Error>;
-//     fn chain_lex<P2: ParserT0<'a>>(self, p2: P2) -> Chain<'a, Self, P2, T0, (), ()>
-//     where
-//         //     // Self: ParserT0<'a>,
-//         P2: ParserT0<'a, Input = Self::Input, Error = Self::Error>,
-//     {
-//         Chain {
-//             p1: self,
-//             p2,
-//             pdlt: Default::default(),
-//             pd0: Default::default(),
-//             pd1: Default::default(),
-//             pd2: Default::default(),
-//         }
-//     }
-// }
-
-
-
-
-
-// pub trait ParserT2<'a, T0, T1> {
-//     type Input;
-//     type Error;
-
-//     fn name(&self, indent: &str) -> String {
-//         format!(
-//             "{indent}parser({input}) -> Result<({t0}, {t1}), {error}>",
-//             input = std::any::type_name::<Self::Input>(),
-//             t0 = std::any::type_name::<T0>(),
-//             t1 = std::any::type_name::<T1>(),
-//             error = std::any::type_name::<Self::Error>()
-//         )
-//     }
-//     fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input, T0, T1), Self::Error>;
-// }
-
-// pub trait Chainable0<'a>:  Parser<'a> + Sized {
-//     fn chain<P2>(self, p2: P2) -> Chain<Self, P2>
-//     where
-//         P2: Parser<'a, Input = Self::Input, Output = (), Error = Self::Error>,
-//     {
-//         Chain { p1: self, p2 }
-//     }
-// }
-
-// pub trait Chainable1<'a>:  Parser<'a> + Sized {
-//     fn chain<S, T, P2>(self, p2: P2) -> Chain<Self, P2>
-//     where
-//     Self: Parser<'a, Output = (S,) , Error = >,
-//     P2: Parser<'a, Input = Self::Input, Output = (Self::Input, T) , Error = Self::Error>,
-//     {
-//         Chain { p1: self, p2 }
-//     }
-// }
-
-// pub trait Parser0<'a>: Sized {
-//     type Input;
-//     type Error;
-
-//     fn parse(&mut self, inp: Self::Input) -> Result<Self::Input, Self::Error>;
-
-//     fn chain0<P2>(self, p2: P2) -> Chain<Self, P2>
-//     where
-//         P2: Parser0<'a, Input = Self::Input, Error = Self::Error>,
-//     {
-//         Chain { p1: self, p2 }
-//     }
-// }
-
-// impl<'a, F> Parser<'a, ()> for F
-// where
-//     F: FnMut(&'a str) -> Result<(&'a str, ()), ParseError>,
-// {
-//     type Error = ParseError;
-//     type Input = &'a str;
-
-//     fn name(&self, indent: &str) -> String {
-//         format!(
-//             "{indent}ParserT0 {func}({input}) -> Result<({input}), {error}>",
-//             func = type_suffix(std::any::type_name::<Self>()),
-//             input = std::any::type_name::<Self::Input>(),
-//             error = type_suffix(std::any::type_name::<Self::Error>())
-//         )
-//     }
-//     fn parse(&mut self, s: &'a str) -> Result<(&'a str, ()), ParseError> {
-//         // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
-//         (self)(s)
+// impl<T0, S> ConcatTuple for (T0, Par<S>) {
+//     type Output = (T0, S);
+//     fn concat(self) -> Self::Output {
+//         let (t0, Par(s)) = self;
+//         (t0, s)
 //     }
 // }
 
@@ -262,13 +176,13 @@ pub struct Lex<T>(T);
 #[derive(Debug, PartialEq)]
 pub struct Par<T>(T);
 
-
-impl<'a, F2> Parser<'a, Lex<()>> for Lex<F2>
+impl<'a, F2> Parser<'a, > for Lex<F2>
 where
     F2: FnMut(&'a str) -> Result<&'a str, ParseError>,
 {
     type Error = ParseError;
     type Input = &'a str;
+    type Output = Lex<()>;
     fn name(&self, indent: &str) -> String {
         format!(
             "{indent}Lex {func}({input}) -> Result<({input}, {t}), {error}>",
@@ -288,12 +202,13 @@ where
     }
 }
 
-impl<'a, F2, T> Parser<'a, Par<T>> for Par<F2>
+impl<'a, F2, T> Parser<'a> for Par<F2>
 where
     F2: FnMut(&'a str) -> Result<(&'a str, T), ParseError>,
 {
     type Error = ParseError;
     type Input = &'a str;
+    type Output = T;
     fn name(&self, indent: &str) -> String {
         format!(
             "{indent}Par {func}({input}) -> Result<({input}, {t}), {error}>",
@@ -303,11 +218,11 @@ where
             error = type_suffix(std::any::type_name::<Self::Error>())
         )
     }
-    fn parse(&mut self, s: &'a str) -> Result<(&'a str, Par<T>), ParseError> {
+    fn parse(&mut self, s: &'a str) -> Result<(&'a str, T), ParseError> {
         // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
         let Par(func) = self;
         match (func)(s) {
-            Ok((s, t)) => Ok((s, Par(t))),
+            Ok((s, t)) => Ok((s, t)),
             Err(e) => Err(e),
         }
     }
@@ -318,15 +233,16 @@ struct SP;
 impl SP {
     fn make_parser<'a, T, E>(
         &self,
-        p: impl Parser<'a, T, Input = &'a str, Error = E>,
-    ) -> impl Parser<'a, T,  Input = &'a str, Error = E> {
+        p: impl Parser<'a, Output=T, Input = &'a str, Error = E>,
+    ) -> impl Parser<'a, Output=T, Input = &'a str, Error = E> {
         p
     }
 }
 
-impl<'a> Parser<'a, ()> for SP {
+impl<'a> Parser<'a> for SP {
     type Input = &'a str;
     type Error = ParseError;
+    type Output = ();
     fn name(&self, indent: &str) -> String {
         format!(
             "{indent}SP({input}) -> Result<(), {error}>",
@@ -335,15 +251,15 @@ impl<'a> Parser<'a, ()> for SP {
         )
     }
 
-    fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input,()), Self::Error> {
-        Ok((inp,()))
+    fn parse(&mut self, inp: Self::Input) -> Result<(Self::Input, ()), Self::Error> {
+        Ok((inp, ()))
     }
 }
 
 /// (a, (b,c)) -> (a,b,c)
 /// (a, (b, (c,d))) ->
 
-trait DeTuple {
+pub trait DeTuple {
     type Output;
     fn detuple(self) -> Self::Output;
 }
@@ -368,7 +284,7 @@ impl<A, B, C, D> DeTuple for (A, (B, (C, D, ()))) {
 mod tests {
     use super::DeTuple;
     use crate::{
-        combo::{Parser, SP, Lex, Par},
+        combo::{Lex, Par, Parser, SP},
         prelude::dc::ParseError,
     };
     #[test]
@@ -400,6 +316,10 @@ mod tests {
             .chain_lex(Lex(ws))
             .chain_lex(Lex(tail_lexer));
 
+        let mut _parser1b = Lex(tail_lexer)
+            .chain_lex(Lex(ws))
+            .chain_lex(Lex(tail_lexer));
+
         let parser2 = SP
             .chain_lex(Lex(|s| tail_lexer(s)))
             .chain_lex(Lex(ws))
@@ -415,18 +335,24 @@ mod tests {
 
         let (s, d) = parser3.parse("5dog").unwrap();
         assert_eq!(s, "dog");
-        assert_eq!(d, Par(5));
+        assert_eq!(d, 5);
 
         let mut parser4 = parser3.chain_parser(parser1);
         let (s, d) = parser4.parse("6d   gs").unwrap();
-        assert_eq!(s, "s");
-        assert_eq!(format!("{:?}", d), "(Par(6), ((((), Lex(())), Lex(())), Lex(())))");
-        println!("{}", parser4.name(""));
-
-        // let mut parser5 = parser4.chain_parser(num_parser);
-        // let (s, d) = parser5.parse("6d   gs").unwrap();
         // assert_eq!(s, "s");
-        // assert_eq!(d, 6);
+        // assert_eq!(
+        //     format!("{:?}", d),
+        //     "(Par(6), ((((), Lex(())), Lex(())), Lex(())))"
+        // );
         // println!("{}", parser4.name(""));
+
+        // let mut parser5 = parser4.chain_parser(Par(num_parser));
+        // let (s, d) = parser5.parse("7d   g4x").unwrap();
+        // assert_eq!(s, "x");
+        // assert_eq!(
+        //     format!("{:?}", d),
+        //     "((Par(7), ((((), Lex(())), Lex(())), Lex(()))), Par(4))"
+        // );
+        // println!("{}", parser5.name(""));
     }
 }
