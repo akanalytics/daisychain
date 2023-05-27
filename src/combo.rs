@@ -1,4 +1,4 @@
-use std::{fmt, marker::PhantomData};
+use std::{fmt::Debug, marker::PhantomData};
 
 use log::trace;
 
@@ -13,8 +13,8 @@ fn type_suffix(type_name: &str) -> &str {
 }
 
 pub trait Parser<'a>: Sized {
-    type Input: fmt::Debug;
-    type Output: fmt::Debug;
+    type Input: Debug;
+    type Output: Debug;
     type Error;
 
     fn name(&self, indent: &str) -> String {
@@ -31,9 +31,13 @@ pub trait Parser<'a>: Sized {
     //     self.parse(inp).map(|(i,t)| (i,t.detuple()))
     // }
 
-    fn chain_parser<P2: Parser<'a>>(self, p2: P2) -> Chain<'a, Self, P2>
+    fn chain_parser<T, P2: Parser<'a, Output = T>>(self, p2: P2) -> Chain<'a, Self, P2>
     where
         P2: Parser<'a, Input = Self::Input, Error = Self::Error>,
+
+        Self::Input: Clone,
+        P2: Parser<'a, Input = Self::Input, Error = Self::Error>,
+        (Self::Output, T): ConcatTuple<Self::Output, P2::Input>,
     {
         Chain {
             p1: self,
@@ -58,8 +62,8 @@ pub struct Chain<'a, P1, P2>
 
 impl<'a, P1, P2, S, T> Parser<'a> for Chain<'a, P1, P2>
 where
-    S: Clone + fmt::Debug,
-    T: fmt::Debug,
+    S: Clone + Debug,
+    T: Debug,
     P1::Input: Clone,
     P1: Parser<'a, Output = S>,
     P2: Parser<'a, Output = T, Input = P1::Input, Error = P1::Error>,
@@ -122,15 +126,25 @@ where
         trace!("o12: {o12:?}");
         Ok(o12)
     }
+
+    // S: Clone + Debug,
+    // T: Debug,
+    // P1::Input: Clone,
+    // P1: Parser<'a, Output = S>,
+    // P2: Parser<'a, Output = T, Input = P1::Input, Error = P1::Error>,
+    // (S, T): ConcatTuple<S, P2::Input>,
 }
 
-pub trait ConcatTuple<O1, I2> {
-    type Output: fmt::Debug;
+pub trait ConcatTuple<O1, I2>
+where
+    Self: Debug,
+{
+    type Output: Debug;
     fn concat(self) -> Self::Output;
     fn input2_from(o1: O1) -> I2;
 }
 
-impl<S: fmt::Debug> ConcatTuple<S, S> for (S, S) {
+impl<S: Debug> ConcatTuple<S, S> for (S, S) {
     type Output = S;
     fn concat(self) -> Self::Output {
         let (_s0, s1) = self;
@@ -141,7 +155,11 @@ impl<S: fmt::Debug> ConcatTuple<S, S> for (S, S) {
     }
 }
 
-impl<S: fmt::Debug, T: fmt::Debug> ConcatTuple<(S, T), S> for ((S, T), S) {
+impl<S, T> ConcatTuple<(S, T), S> for ((S, T), S)
+where
+    S: Debug,
+    T: Debug,
+{
     type Output = (S, T);
     fn concat(self) -> Self::Output {
         let ((_s0, t), s2) = self;
@@ -152,6 +170,24 @@ impl<S: fmt::Debug, T: fmt::Debug> ConcatTuple<(S, T), S> for ((S, T), S) {
         s0
     }
 }
+
+impl<S, T0, T1> ConcatTuple<(S, T0, T1), S> for ((S, T0, T1), S)
+where
+    Self: Debug,
+    (S, T0, T1): Debug,
+{
+    type Output = (S, T0, T1);
+    fn concat(self) -> Self::Output {
+        let ((_s0, t0, t1), s2) = self;
+        (s2, t0, t1)
+    }
+    fn input2_from(o1: (S, T0, T1)) -> S {
+        let (s0, _t0, _t1) = o1;
+        s0
+    }
+}
+
+// ConcatTuple<(&str, i32), &str>` is not implemented for `((&str, i32), (&str, i32))
 
 // struct IO<I,O>{ i:I, o:O }
 
@@ -220,7 +256,7 @@ where
     }
 }
 
-impl<'a, F2, T: fmt::Debug> Parser<'a> for Par<F2>
+impl<'a, F2, T: Debug> Parser<'a> for Par<F2>
 where
     F2: FnMut(&'a str) -> Result<(&'a str, T), ParseError>,
 {
@@ -302,7 +338,7 @@ impl<A, B, C, D> DeTuple for (A, (B, (C, D, ()))) {
 mod tests {
     use super::DeTuple;
     use crate::{
-        combo::{Parser, SP},
+        combo::{Par, Parser, SP},
         prelude::dc::ParseError,
     };
     use test_log::test;
@@ -347,23 +383,22 @@ mod tests {
         println!("{}", parser2.name(""));
         assert_eq!(s, "2dog");
 
-        // let mut parser3 = SP.make_parser(num_parser);
-        // println!("{}", parser3.name(""));
+        let mut parser3 = SP.make_parser(Par(num_parser));
+        println!("{}", parser3.name(""));
 
-        // let (s, d) = parser3.parse("5dog").unwrap();
-        // assert_eq!(s, "dog");
-        // assert_eq!(d, 5);
+        let (s, d) = parser3.parse("5dog").unwrap();
+        assert_eq!(s, "dog");
+        assert_eq!(d, 5);
 
-        // let mut parser4 = parser3.chain_parser(parser1);
-        // let (s, d) = parser4.parse("6d   gs").unwrap();
-        // assert_eq!(s, "s");
-        // assert_eq!(
-        //     format!("{:?}", d),
-        //     "(Par(6), ((((), Lex(())), Lex(())), Lex(())))"
-        // );
-        // println!("{}", parser4.name(""));
+        let mut parser4 = parser3.chain_parser(parser1);
+        let (s, d) = parser4.parse("6d   gs").unwrap();
+        assert_eq!(s, "s");
+        assert_eq!(d, 6);
+        println!("{}", parser4.name(""));
 
-        // let mut parser5 = parser4.chain_parser(num_parser);
+        // Parser<Input=&str, Output=(i32, i32), Error=ParseError>::name(
+        // let mut parser5 = parser4.chain_parser(Par(num_parser)) ;
+        // println!("{}", parser5.name(""));
         // let (s, d) = parser5.parse("7d   g4x").unwrap();
         // assert_eq!(s, "x");
         // assert_eq!(
