@@ -187,6 +187,27 @@ where
     }
 }
 
+
+
+impl<S, S0, T0> ConcatTuple<(S, S0), S> for ((S, S0), (S, T0))
+where
+    Self: Debug,
+    (S, S0, T0): Debug,
+{
+    type Output = (S, S0, T0);
+    fn concat(self) -> Self::Output {
+        let ((_s0, s0), (t, t0)) = self;
+        (t, s0, t0)
+    }
+    fn input2_from(o1: (S, S0)) -> S {
+        let (s0, _s0,) = o1;
+        s0
+    }
+}
+
+
+
+
 // ConcatTuple<(&str, i32), &str>` is not implemented for `((&str, i32), (&str, i32))
 
 // struct IO<I,O>{ i:I, o:O }
@@ -285,7 +306,7 @@ where
 struct SP;
 
 impl SP {
-    fn make_parser<'a, T, E>(
+    fn make_parser<'a, T: Debug, E>(
         &self,
         p: impl Parser<'a, Output = T, Input = &'a str, Error = E>,
     ) -> impl Parser<'a, Output = T, Input = &'a str, Error = E> {
@@ -397,14 +418,12 @@ mod tests {
         println!("{}", parser4.name(""));
 
         // Parser<Input=&str, Output=(i32, i32), Error=ParseError>::name(
-        // let mut parser5 = parser4.chain_parser(Par(num_parser)) ;
-        // println!("{}", parser5.name(""));
-        // let (s, d) = parser5.parse("7d   g4x").unwrap();
-        // assert_eq!(s, "x");
-        // assert_eq!(
-        //     format!("{:?}", d),
-        //     "((Par(7), ((((), Lex(())), Lex(())), Lex(()))), Par(4))"
-        // );
-        // println!("{}", parser5.name(""));
+        let mut parser5 = parser4.chain_parser(Par(num_parser)) ;
+        println!("{}", parser5.name(""));
+        let (s, d1, d2) = parser5.parse("7d   g4x").unwrap();
+        assert_eq!(s, "x");
+        assert_eq!(d1, 7);
+        assert_eq!(d2, 4);
+        println!("{}", parser5.name(""));
     }
 }
