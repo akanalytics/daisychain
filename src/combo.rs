@@ -1,8 +1,9 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use log::trace;
+use log::Level::Trace;
+use log::{log_enabled, trace};
 
-use crate::prelude::dc::ParseError;
+use crate::{prelude::dc::ParseError, LABEL, LOG_TARGET};
 
 fn type_suffix(type_name: &str) -> &str {
     if let Some(i) = type_name.rfind("::") {
@@ -25,7 +26,7 @@ pub trait Parser<'a>: Sized {
         )
     }
 
-    fn parse(&mut self, inp: Self::Input) -> Result<Self::Output, Self::Error>;
+    fn validate(&mut self, inp: Self::Input) -> Result<Self::Output, Self::Error>;
 
     // fn results(&mut self, inp: Self::Input) -> Result<(Self::Input,<T as DeTuple>::Output), Self::Error> where T: DeTuple {
     //     self.parse(inp).map(|(i,t)| (i,t.detuple()))
@@ -34,10 +35,9 @@ pub trait Parser<'a>: Sized {
     fn chain_parser<T, P2: Parser<'a, Output = T>>(self, p2: P2) -> Chain<'a, Self, P2>
     where
         P2: Parser<'a, Input = Self::Input, Error = Self::Error>,
-
-        Self::Input: Clone,
-        P2: Parser<'a, Input = Self::Input, Error = Self::Error>,
-        (Self::Output, T): ConcatTuple<Self::Output, P2::Input>,
+        // Self::Input: Clone,
+        // P2: Parser<'a, Input = Self::Input, Error = Self::Error>,
+        // (Self::Output, T): ConcatTuple<Self::Output, P2::Input>,
     {
         Chain {
             p1: self,
@@ -47,17 +47,80 @@ pub trait Parser<'a>: Sized {
     }
 }
 
+fn func_ws<'a>(s: &str) -> Result<&str, ParseError> {
+    Ok(s.trim_start())
+}
+
+type LEXER = for<'b> fn(&'b str) -> Result<&'b str, ParseError>;
+
+impl<'a> StrParser<'a> for LEXER {}
+
+pub trait StrParser<'a>: Parser<'a, Input = &'a str, Output = &'a str, Error = ParseError> {
+    fn ws(self) -> Chain<'a, Self, LEXER> {
+        self.chain_parser(func_ws)
+    }
+
+    fn debug_context(self, span_name: &'static str) -> Self {
+        if log_enabled!(target: LOG_TARGET, Trace) {
+            LABEL.with(|f| f.set("")); // blank the span name before logging
+                                       // self.log_success("debug_context", span_name);
+            LABEL.with(|f| f.set(span_name));
+        }
+
+        self
+    }
+
+    fn find(self, needle: &'a str) -> Find<'a, Self> {
+        Find {
+            needle,
+            chain: Chain {
+                p1: self,
+                p2: SP,
+                pdlt: Default::default(),
+            },
+        }
+    }
+}
+
+pub struct Find<'a, P> {
+    needle: &'a str,
+    chain: Chain<'a, P, SP>,
+}
+
+impl<'a, P> Parser<'a> for Find<'a, P>
+where
+    Chain<'a, P, SP>: StrParser<'a>,
+{
+    type Input = &'a str;
+    type Output = &'a str;
+    type Error = ParseError;
+
+    fn validate(&mut self, inp: Self::Input) -> Result<Self::Output, Self::Error> {
+        self.chain.validate(inp).and_then(|s| {
+            s.find(self.needle)
+                .map(|i| &s[i..])
+                .ok_or(ParseError::NoMatch {
+                    action: "",
+                    args: "",
+                })
+        })
+    }
+}
+
+impl<'a, P> StrParser<'a> for Find<'a, P> where Chain<'a, P, SP>: StrParser<'a> {}
+
 pub struct Chain<'a, P1, P2>
-// where
-//     S: ParserT1<'a, S0>,
-//     T: ParserT0<'a, Input = S::Input, Error = S::Error>,
 {
     p1: P1,
     p2: P2,
     pdlt: PhantomData<&'a ()>,
-    // pd0: PhantomData<S1>,
-    // pd1: PhantomData<S2>,
-    // pd2: PhantomData<S2>,
+}
+
+impl<'a, P1, P2> StrParser<'a> for Chain<'a, P1, P2>
+where
+    P1: StrParser<'a>,
+    P2: StrParser<'a>,
+{
 }
 
 impl<'a, P1, P2, S, T> Parser<'a> for Chain<'a, P1, P2>
@@ -113,13 +176,13 @@ where
     //  -----
     //  (str) ->  (str, (((S0,S1), S2), T))
 
-    fn parse(&mut self, inp: Self::Input) -> Result<Self::Output, Self::Error> {
-        let o1: P1::Output = self.p1.parse(inp.clone())?;
+    fn validate(&mut self, inp: Self::Input) -> Result<Self::Output, Self::Error> {
+        let o1: P1::Output = self.p1.validate(inp.clone())?;
         trace!("o1: {p1}({inp:?}) -> Ok({o1:?})", p1 = self.p1.name(""));
         let s = <(P1::Output, P2::Output) as ConcatTuple<P1::Output, P2::Input>>::input2_from(
             o1.clone(),
         );
-        let o2: P2::Output = self.p2.parse(s.clone())?;
+        let o2: P2::Output = self.p2.validate(s.clone())?;
         trace!("o2: {p2}({s:?}) -> Ok({o2:?})", p2 = self.p2.name(""));
         let o12: <(P1::Output, P2::Output) as ConcatTuple<P1::Output, P2::Input>>::Output =
             ConcatTuple::concat((o1, o2));
@@ -187,8 +250,6 @@ where
     }
 }
 
-
-
 impl<S, S0, T0> ConcatTuple<(S, S0), S> for ((S, S0), (S, T0))
 where
     Self: Debug,
@@ -200,13 +261,10 @@ where
         (t, s0, t0)
     }
     fn input2_from(o1: (S, S0)) -> S {
-        let (s0, _s0,) = o1;
+        let (s0, _s0) = o1;
         s0
     }
 }
-
-
-
 
 // ConcatTuple<(&str, i32), &str>` is not implemented for `((&str, i32), (&str, i32))
 
@@ -267,7 +325,7 @@ where
             error = type_suffix(std::any::type_name::<Self::Error>())
         )
     }
-    fn parse(&mut self, s: &'a str) -> Result<&'a str, ParseError> {
+    fn validate(&mut self, s: &'a str) -> Result<&'a str, ParseError> {
         // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
         let func = self;
         match (func)(s) {
@@ -293,7 +351,7 @@ where
             error = type_suffix(std::any::type_name::<Self::Error>())
         )
     }
-    fn parse(&mut self, s: &'a str) -> Result<(&'a str, T), ParseError> {
+    fn validate(&mut self, s: &'a str) -> Result<(&'a str, T), ParseError> {
         // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
         let Par(func) = self;
         match (func)(s) {
@@ -303,7 +361,7 @@ where
     }
 }
 
-struct SP;
+pub struct SP;
 
 impl SP {
     fn make_parser<'a, T: Debug, E>(
@@ -313,6 +371,8 @@ impl SP {
         p
     }
 }
+
+impl<'a> StrParser<'a> for SP {}
 
 impl<'a> Parser<'a> for SP {
     type Input = &'a str;
@@ -326,7 +386,7 @@ impl<'a> Parser<'a> for SP {
         )
     }
 
-    fn parse(&mut self, inp: Self::Input) -> Result<Self::Input, Self::Error> {
+    fn validate(&mut self, inp: Self::Input) -> Result<Self::Input, Self::Error> {
         Ok(inp)
     }
 }
@@ -372,7 +432,7 @@ mod tests {
     #[test]
     fn test_combo() {
         // define a simple lexer+parser
-        assert_eq!(SP.parse("cat").unwrap(), "cat");
+        assert_eq!(SP.validate("cat").unwrap(), "cat");
         fn tail_lexer<'a>(s: &'a str) -> Result<&'a str, ParseError> {
             Ok(&s[1..])
         }
@@ -399,7 +459,7 @@ mod tests {
             .chain_parser(ws)
             .chain_parser(tail_lexer);
 
-        let s = parser1.parse("c   t2dog").unwrap();
+        let s = parser1.validate("c   t2dog").unwrap();
         println!("{}", parser1.name(""));
         println!("{}", parser2.name(""));
         assert_eq!(s, "2dog");
@@ -407,20 +467,20 @@ mod tests {
         let mut parser3 = SP.make_parser(Par(num_parser));
         println!("{}", parser3.name(""));
 
-        let (s, d) = parser3.parse("5dog").unwrap();
+        let (s, d) = parser3.validate("5dog").unwrap();
         assert_eq!(s, "dog");
         assert_eq!(d, 5);
 
         let mut parser4 = parser3.chain_parser(parser1);
-        let (s, d) = parser4.parse("6d   gs").unwrap();
+        let (s, d) = parser4.validate("6d   gs").unwrap();
         assert_eq!(s, "s");
         assert_eq!(d, 6);
         println!("{}", parser4.name(""));
 
         // Parser<Input=&str, Output=(i32, i32), Error=ParseError>::name(
-        let mut parser5 = parser4.chain_parser(Par(num_parser)) ;
+        let mut parser5 = parser4.chain_parser(Par(num_parser));
         println!("{}", parser5.name(""));
-        let (s, d1, d2) = parser5.parse("7d   g4x").unwrap();
+        let (s, d1, d2) = parser5.validate("7d   g4x").unwrap();
         assert_eq!(s, "x");
         assert_eq!(d1, 7);
         assert_eq!(d2, 4);
