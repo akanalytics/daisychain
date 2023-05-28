@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::{fmt::Debug, marker::PhantomData};
 
 use log::Level::Trace;
@@ -53,9 +54,9 @@ fn func_ws<'a>(s: &str) -> Result<&str, ParseError> {
 
 type LEXER = for<'b> fn(&'b str) -> Result<&'b str, ParseError>;
 
-impl<'a> StrParser<'a> for LEXER {}
+impl<'a> StrParser<'a, &'a str> for LEXER {}
 
-pub trait StrParser<'a>: Parser<'a, Input = &'a str, Output = &'a str, Error = ParseError> {
+pub trait StrParser<'a, O>: Parser<'a, Input = &'a str, Output = O, Error = ParseError> {
     fn ws(self) -> Chain<'a, Self, LEXER> {
         self.chain_parser(func_ws)
     }
@@ -70,6 +71,12 @@ pub trait StrParser<'a>: Parser<'a, Input = &'a str, Output = &'a str, Error = P
         self
     }
 
+    fn parse_selection<T: FromStr + Debug>(self) -> ParseSelection<'a, T> {
+        ParseSelection {
+            pd: Default::default(),
+        }
+    }
+
     fn find(self, needle: &'a str) -> Find<'a, Self> {
         Find {
             needle,
@@ -82,6 +89,41 @@ pub trait StrParser<'a>: Parser<'a, Input = &'a str, Output = &'a str, Error = P
     }
 }
 
+pub struct ParseSelection<'a, T> {
+    pd: PhantomData<&'a T>,
+}
+
+impl<'a, T> Parser<'a> for ParseSelection<'a, T>
+where
+    T: FromStr + Debug,
+{
+    type Input = &'a str;
+    type Output = (&'a str, T);
+    type Error = ParseError;
+
+    fn validate(&mut self, inp: Self::Input) -> Result<Self::Output, Self::Error> {
+        match inp.parse::<T>() {
+            Ok(t) => Ok((inp, t)),
+            Err(..) => {
+                let e = ParseError::NoMatch {
+                    action: "FromStr",
+                    args: "",
+                };
+                Err(e)
+            }
+        }
+    }
+}
+
+
+
+// impl<'a, T, O> StrParser<'a, O> for ParseSelection<'a, (&'a str, T)>
+// where
+//     T: FromStr + Debug,
+//     ParseSelection<'a, (&'a str, T)>: Parser<'a>,
+// {
+// }
+
 pub struct Find<'a, P> {
     needle: &'a str,
     chain: Chain<'a, P, SP>,
@@ -89,7 +131,7 @@ pub struct Find<'a, P> {
 
 impl<'a, P> Parser<'a> for Find<'a, P>
 where
-    Chain<'a, P, SP>: StrParser<'a>,
+    Chain<'a, P, SP>: StrParser<'a, &'a str>,
 {
     type Input = &'a str;
     type Output = &'a str;
@@ -107,19 +149,18 @@ where
     }
 }
 
-impl<'a, P> StrParser<'a> for Find<'a, P> where Chain<'a, P, SP>: StrParser<'a> {}
 
-pub struct Chain<'a, P1, P2>
-{
+pub struct Chain<'a, P1, P2> {
     p1: P1,
     p2: P2,
     pdlt: PhantomData<&'a ()>,
 }
 
-impl<'a, P1, P2> StrParser<'a> for Chain<'a, P1, P2>
+impl<'a, P1, P2, O> StrParser<'a, O> for Chain<'a, P1, P2>
 where
-    P1: StrParser<'a>,
-    P2: StrParser<'a>,
+    Chain<'a, P1, P2>: Parser<'a, Input = &'a str, Output = O, Error = ParseError>,
+    P1: StrParser<'a, O>,
+    P2: StrParser<'a, &'a str>,
 {
 }
 
@@ -372,7 +413,7 @@ impl SP {
     }
 }
 
-impl<'a> StrParser<'a> for SP {}
+impl<'a> StrParser<'a, &'a str> for SP {}
 
 impl<'a> Parser<'a> for SP {
     type Input = &'a str;
@@ -486,4 +527,5 @@ mod tests {
         assert_eq!(d2, 4);
         println!("{}", parser5.name(""));
     }
+    
 }
