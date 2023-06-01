@@ -293,18 +293,6 @@ pub trait Selectable<'a>: Matchable<'a> {
         (self, None)
     }
 
-    // fn parse_opt_selection_as_str(self) -> (Self, Option<Option<&'a str>>) {
-    //     self.log_inputs("parse_selection_as_str", "");
-    //     if let Ok(text) = self.get_selection() {
-    //         if let Ok(_cur) = self.str() {
-    //             self.log_success_with_result("parse_selection_as_str", "", &text);
-    //             return (self, Some(Some(text)));
-    //         } else {
-    //             return (self, Some(None));
-    //         }
-    //     }
-    //     (self, None)
-    // }
 
     // fn parse_selection_as_f64(self) -> Result<Self::TupleReturn<f64>, ParseError> {
     //     let text = self.get_selection()?;
