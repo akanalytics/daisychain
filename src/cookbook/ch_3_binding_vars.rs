@@ -23,12 +23,12 @@ fn parse_quoted_text(inp: &str) -> Result<(&str, QuotedText), dc::ParseError> {
         .validate()?;
 
     // step 2: use the quote character to extract the text between quotes
-    let (c, text) = c
+    let (c, text) = dc::Cursor::from(c)
         .chars_not_in(0.., &[quote])
         .parse_selection()
         .chars_in(1..=1, &[quote])
         .validate()?;
-    Ok((c.str()?, QuotedText { quote, text }))
+    Ok((c, QuotedText { quote, text }))
 }
 
 /// alternative implementation using "bind"
@@ -43,7 +43,7 @@ fn parse_quoted_text_v2(inp: &str) -> Result<(&str, QuotedText), dc::ParseError>
         .parse_selection()
         .chars_in(1..=1, &[quote])
         .validate()?;
-    Ok((c.str()?, QuotedText { quote, text }))
+    Ok((c, QuotedText { quote, text }))
 }
 
 #[cfg(test)]

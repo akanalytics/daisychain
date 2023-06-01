@@ -26,11 +26,10 @@ impl FromStr for Color {
 
 /// uses the FromStr trait impl above
 fn parse_enum(s: &str) -> Result<(&str, Color), dc::ParseError> {
-    let (c, col) = dc::Cursor::from(s)
+    dc::Cursor::from(s)
         .text_alt(&["Red", "Blue", "Green"])
         .parse_selection()
-        .validate()?;
-    Ok((c.str()?, col))
+        .validate()
 }
 
 #[cfg(test)]

@@ -41,26 +41,26 @@ fn parse_str_money(s: &str) -> Result<(&str, Money), dc::ParseError> {
         .select(|c| c.digits(1..).text(".").digits(2..=2))
         .parse_selection::<f32>()
         .validate()?;
-    Ok((c.str()?, Money(float)))
-}
-
-///
-/// Cursor-style (free-function) parser:
-///
-/// the function takes a Cursor and returns a Result of (Cursor, T)
-///
-fn parse_money(s: dc::Cursor) -> Result<(dc::Cursor, Money), dc::ParseError> {
-    let (c, float) = dc::Cursor::from(s)
-        .debug_context("money")
-        .text("$")
-        .select(|c| c.digits(1..).text(".").digits(2..=2))
-        .parse_selection()
-        .validate()?;
     Ok((c, Money(float)))
 }
 
+// ///
+// /// Cursor-style (free-function) parser:
+// ///
+// /// the function takes a Cursor and returns a Result of (Cursor, T)
+// ///
+// fn parse_money(s: dc::Cursor) -> Result<(dc::Cursor, Money), dc::ParseError> {
+//     let (c, float) = dc::Cursor::from(s)
+//         .debug_context("money")
+//         .text("$")
+//         .select(|c| c.digits(1..).text(".").digits(2..=2))
+//         .parse_selection()
+//         .validate()?;
+//     Ok((c, Money(float)))
+// }
+
 ///
-/// Cursor-style (associated-function or method) parser:
+/// Stir-style (associated-function or method) parser:
 ///
 /// the function takes a Cursor and returns a Result of (Cursor, T)
 ///
@@ -73,7 +73,7 @@ struct MoneyParser {
 /// because we have two references as assoc-function parameters
 /// rust needs to be told about lifetimes for Cursor/&str
 impl MoneyParser {
-    fn parse<'a>(&self, s: dc::Cursor<'a>) -> Result<(dc::Cursor<'a>, Money), dc::ParseError> {
+    fn parse<'a>(&self, s: &'a str) -> Result<(&'a str, Money), dc::ParseError> {
         let (c, float) = dc::Cursor::from(s)
             .debug_context("MoneyParser::parse")
             .text(&self.currency)
@@ -88,22 +88,20 @@ fn parse_lots_of_money(s: &str) -> Result<Vec<Money>, dc::ParseError> {
     let mp = MoneyParser {
         currency: "£".to_string(),
     };
-    let (c, m1, m2, m3) = dc::Cursor::from(s)
+    let (c, m1, m2) = dc::Cursor::from(s)
         .select(|c| c.text("$").digits(1..).text(".").digits(2..=2))
         .parse_selection() // uses <Money as FromStr>
-        .ws()
-        .parse_with(parse_money) // uses Cursor-style free function
         .ws()
         .parse_with(parse_str_money) // uses stir-style free function
         .ws()
         .validate()?;
 
-    let (_c, m4) = c
+    let (_c, m3) = dc::Cursor::from(c)
         .parse_with(|c| mp.parse(c)) // uses stir-style free function
         .validate()?;
 
     let mut vec = vec![];
-    vec.extend([m1, m2, m3, m4]);
+    vec.extend([m1, m2, m3]);
     Ok(vec)
 }
 
@@ -114,11 +112,10 @@ mod tests {
 
     #[test]
     fn test_parse_lots_of_money() {
-        let s = "$1.15 $2.25 $3.35 £4.45";
+        let s = "$1.15 $2.25 £4.45";
         let vec = parse_lots_of_money(s).unwrap();
         assert_eq!(vec[0], Money(1.15));
         assert_eq!(vec[1], Money(2.25));
-        assert_eq!(vec[2], Money(3.35));
-        assert_eq!(vec[3], Money(4.45));
+        assert_eq!(vec[2], Money(4.45));
     }
 }

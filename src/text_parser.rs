@@ -293,7 +293,6 @@ pub trait Selectable<'a>: Matchable<'a> {
         (self, None)
     }
 
-
     // fn parse_selection_as_f64(self) -> Result<Self::TupleReturn<f64>, ParseError> {
     //     let text = self.get_selection()?;
     //     let cur = self.str()?;
@@ -644,14 +643,15 @@ pub trait Matchable<'a>: Sized {
 
     fn parse_struct_vec<P, T>(self, mut parser: P) -> (Self, Option<Vec<T>>)
     where
-        P: FnMut(Self) -> std::result::Result<(Self, T), ParseError>,
+        P: FnMut(&'a str) -> std::result::Result<(&'a str, T), ParseError>,
         Self: Clone,
         // C: SelectableCursor<'a>
         // A: IntoIterator<Item = T>
     {
         let mut vec = vec![];
-        // let mut str = self.str()?;
-        let mut str = self;
+        let Ok(mut str) = self.str() else {
+            return (self, None)
+        };
         loop {
             match (parser)(str.clone()) {
                 Ok((s, t)) => {
@@ -659,11 +659,11 @@ pub trait Matchable<'a>: Sized {
                     str = s;
                 }
                 Err(ParseError::NoMatch { .. }) => {
-                    return (str, Some(vec));
+                    return (self.set_str(str), Some(vec));
                 }
 
                 Err(fatal) => {
-                    return (str.set_error(fatal), None);
+                    return (self.set_error(fatal), None);
                 }
             }
         }
@@ -671,21 +671,19 @@ pub trait Matchable<'a>: Sized {
 
     fn parse_struct_vec_to<P, X, T>(self, mut parser: P, vec: &mut X) -> Result<Self, ParseError>
     where
-        P: FnMut(Self) -> std::result::Result<(Self, T), ParseError>,
+        P: FnMut(&'a str) -> std::result::Result<(&'a str, T), ParseError>,
         X: Extend<T>,
         Self: Clone,
         // A: IntoIterator<Item = T>
     {
-        let mut str = self; // .str()?;
+        let mut str = self.str()?;
         loop {
             match (parser)(str.clone()) {
                 Ok((s, t)) => {
                     vec.extend(std::iter::once(t));
                     str = s;
                 }
-                Err(ParseError::NoMatch { .. }) => {
-                    return Ok(str); // self.set_str(str)
-                }
+                Err(ParseError::NoMatch { .. }) => return Ok(self.set_str(str)),
 
                 Err(ParseError::Fatal(e)) => {
                     return Err(ParseError::Fatal(e));
@@ -1001,7 +999,7 @@ impl<'a> Selectable<'a> for Cursor<'a> {
 
 impl<'a> Matchable<'a> for Cursor<'a> {
     type Cursor = Self;
-    type DeTuple = Self;
+    type DeTuple = &'a str;
 
     #[inline]
     fn str(&self) -> Result<&'a str, ParseError> {
@@ -1038,7 +1036,7 @@ impl<'a> Matchable<'a> for Cursor<'a> {
 
     fn validate(self) -> Result<Self::DeTuple, ParseError> {
         match self.err {
-            None => Ok(self),
+            None => Ok(self.str()?),
             Some(e) => Err(e),
         }
     }
@@ -1060,7 +1058,7 @@ impl<'a, T> Selectable<'a> for (Cursor<'a>, Option<T>) {
 
 impl<'a, T> Matchable<'a> for (Cursor<'a>, Option<T>) {
     type Cursor = Cursor<'a>;
-    type DeTuple = (Cursor<'a>, T);
+    type DeTuple = (&'a str, T);
 
     #[inline]
     fn str(&self) -> Result<&'a str, ParseError> {
@@ -1101,7 +1099,7 @@ impl<'a, T> Matchable<'a> for (Cursor<'a>, Option<T>) {
 
 impl<'a, T1, T2> Matchable<'a> for ((Cursor<'a>, Option<T1>), Option<T2>) {
     type Cursor = Cursor<'a>;
-    type DeTuple = (Cursor<'a>, T1, T2);
+    type DeTuple = (&'a str, T1, T2);
 
     #[inline]
     fn str(&self) -> Result<&'a str, ParseError> {
@@ -1140,7 +1138,7 @@ impl<'a, T1, T2> Matchable<'a> for ((Cursor<'a>, Option<T1>), Option<T2>) {
 
 impl<'a, T1, T2, T3> Matchable<'a> for (((Cursor<'a>, Option<T1>), Option<T2>), Option<T3>) {
     type Cursor = Cursor<'a>;
-    type DeTuple = (Cursor<'a>, T1, T2, T3);
+    type DeTuple = (&'a str, T1, T2, T3);
 
     #[inline]
     fn str(&self) -> Result<&'a str, ParseError> {
@@ -1248,7 +1246,7 @@ mod tests {
             .parse_selection()
             .bind(&mut sss)
             .validate()?;
-        Ok((c.str()?, Time(hh, mm, sss)))
+        Ok((c, Time(hh, mm, sss)))
     }
 
     fn parse_time_v2(s: &str) -> Result<(&str, Time), ParseError> {
@@ -1270,7 +1268,7 @@ mod tests {
             .parse_selection()
             .bind(&mut sss)
             .validate()?;
-        Ok((c.str()?, Time(hh, mm, sss)))
+        Ok((c, Time(hh, mm, sss)))
     }
 
     fn parse_time_v3(s: &str) -> Result<(&str, Time), ParseError> {
@@ -1284,11 +1282,11 @@ mod tests {
             .select(|c| c.digits(2..=2).text(".").digits(3..=3))
             .parse_selection()
             .validate()?;
-        Ok((c.str()?, Time(hh, mm, sss)))
+        Ok((c, Time(hh, mm, sss)))
     }
 
-    fn parse_time_v4<'a>(s: Cursor<'a>) -> Result<(Cursor<'a>, Time), ParseError> {
-        let (c, hh, mm, sss) = s
+    fn parse_time_v4<'a>(s: &str) -> Result<(&str, Time), ParseError> {
+        let (c, hh, mm, sss) = Cursor::from(s)
             .selection_start()
             .digits(2..=2)
             .parse_selection()
@@ -1315,7 +1313,7 @@ mod tests {
             .unwrap();
         assert_eq!(i, 42);
         assert_eq!(j, 45);
-        assert_eq!(c.cur, Some("Y"));
+        assert_eq!(c, "Y");
 
         let (c, s) = Cursor::from(" cat ")
             .ws()
@@ -1325,7 +1323,7 @@ mod tests {
             .validate()
             .unwrap();
         assert_eq!(s, String::from("cat"));
-        assert_eq!(c.cur, Some(""));
+        assert_eq!(c, "");
 
         let (c, s) = Cursor::from(" cat ")
             .ws()
@@ -1335,7 +1333,7 @@ mod tests {
             .validate()
             .unwrap();
         assert_eq!(s, String::from("cat"));
-        assert_eq!(c.cur, Some(""));
+        assert_eq!(c, "");
     }
 
     #[test]
@@ -1366,7 +1364,7 @@ mod tests {
             ("", Time(23, 59, 13.234))
         );
         assert_eq!(
-            parse_time_v4(Cursor::from("23:59:13.234")).unwrap().1,
+            parse_time_v4("23:59:13.234").unwrap().1,
             Time(23, 59, 13.234)
         );
 
@@ -1410,7 +1408,8 @@ mod tests {
         let mut vec1 = vec![];
         let res1 = s.parse_struct_vec_to(
             |c| {
-                c.selection_start()
+                Cursor::from(c)
+                    .selection_start()
                     .digits(1..5)
                     .selection_end()
                     .text_alt(&[",", " "])
@@ -1442,7 +1441,8 @@ mod tests {
                 .text("{")
                 .ws()
                 .parse_struct_vec(|c| {
-                    c.parse_with(|c| parse_time_v3(c))
+                    Cursor::from(c)
+                        .parse_with(|c| parse_time_v3(c))
                         .maybe(",")
                         .ws()
                         .validate()
@@ -1450,7 +1450,7 @@ mod tests {
                 .ws()
                 .text("}")
                 .validate()?;
-            Ok((c.str()?, vec))
+            Ok((c, vec))
         }
         let res = parse_str_time_array("{01:02:03.345, 02:02:03.346, 23:02:03.347}").unwrap();
         assert_eq!(res.1.len(), 3);
@@ -1459,24 +1459,29 @@ mod tests {
         assert_eq!(res.1.len(), 3);
         assert_eq!(res.0, "");
 
-        fn parse_time_array(s: Cursor) -> Result<(Cursor, Vec<Time>), ParseError> {
-            let (c, vec) = s
+        fn parse_time_array(s: &str) -> Result<(&str, Vec<Time>), ParseError> {
+            let (c, vec) = Cursor::from(s)
                 .debug_context("time array")
                 .text("{")
                 .ws()
-                .parse_struct_vec(|c| c.parse_with(parse_time_v4).maybe(",").ws().validate())
+                .parse_struct_vec(|c| {
+                    Cursor::from(c)
+                        .parse_with(parse_time_v4)
+                        .maybe(",")
+                        .ws()
+                        .validate()
+                })
                 .ws()
                 .text("}")
                 .validate()?;
             Ok((c, vec))
         }
-        let res =
-            parse_time_array(Cursor::from("{01:02:03.345, 02:02:03.346, 23:02:03.347}")).unwrap();
+        let res = parse_time_array("{01:02:03.345, 02:02:03.346, 23:02:03.347}").unwrap();
         assert_eq!(res.1.len(), 3);
         assert_eq!(res.1[0], Time(1, 2, 3.345));
         assert_eq!(res.1[2], Time(23, 2, 3.347));
         assert_eq!(res.1.len(), 3);
-        assert_eq!(res.0.str().unwrap(), "");
+        assert_eq!(res.0, "");
     }
 }
 

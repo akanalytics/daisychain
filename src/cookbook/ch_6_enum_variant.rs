@@ -9,9 +9,9 @@ enum Number {
 
 /// the idea is to use `if let` to try and parse the enum variants in succession.
 ///
-fn parse_number(c: Cursor) -> Result<(Cursor, Number), ParseError> {
+fn parse_number(s: &str) -> Result<(&str, Number), ParseError> {
     // try first variant (using clone to save the initial cursor position)
-    if let Ok((c, s)) = c
+    if let Ok((c, s)) = Cursor::from(s)
         .clone()
         .debug_context("binary")
         .text("0b")
@@ -24,7 +24,7 @@ fn parse_number(c: Cursor) -> Result<(Cursor, Number), ParseError> {
 
     // try second variant (using clone to save the initial cursor position)
     let hex_chars = b"0123456789ABCDEF".map(|c| c as char);
-    if let Ok((c, hex)) = c
+    if let Ok((c, hex)) = Cursor::from(s)
         .clone()
         .debug_context("hex")
         .text("0x")
@@ -36,7 +36,7 @@ fn parse_number(c: Cursor) -> Result<(Cursor, Number), ParseError> {
     }
 
     // try third variant - no need to clone
-    if let Ok((c, int)) = c
+    if let Ok((c, int)) = Cursor::from(s)
         .debug_context("decimal")
         .digits(1..)
         .parse_selection()
@@ -50,7 +50,6 @@ fn parse_number(c: Cursor) -> Result<(Cursor, Number), ParseError> {
         args: "",
     })
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -68,6 +67,6 @@ mod tests {
         // 0b201 will parse as a decimal zero, with cursor moved to 0|b201
         let (c, var) = parse_number("0b201".into()).unwrap();
         assert_eq!(var, Number::Decimal(0));
-        assert_eq!(c.str().unwrap(), "b201");
+        assert_eq!(c, "b201");
     }
 }

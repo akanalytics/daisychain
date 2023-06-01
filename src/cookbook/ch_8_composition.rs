@@ -1,7 +1,8 @@
 use std::str::FromStr;
 
-use crate::prelude::*;
 use crate::cookbook::{ch_2_simple_example::Time, ch_7_alternate::parse_clock};
+use crate::prelude::dc::Cursor;
+use crate::prelude::*;
 
 ///
 ///
@@ -54,8 +55,8 @@ struct TrainTime {
 /// parse_with expects a closure/function that matches
 ///  fn(dc::Cursor) -> Result<(dc::Cursor,T), dc::ParseError>
 ///
-fn parse_traintime(c: dc::Cursor) -> Result<(dc::Cursor, TrainTime), dc::ParseError> {
-    let (c, city, arr, dep) = c
+fn parse_traintime(c: &str) -> Result<(&str, TrainTime), dc::ParseError> {
+    let (c, city, arr, dep) = Cursor::from(c)
         .debug_context("train_time")
         .word()
         .parse_selection()
@@ -86,8 +87,7 @@ fn parse_timetable(s: &str) -> Result<Vec<TrainTime>, dc::ParseError> {
 }
 
 fn parse_str_clock(s: &str) -> Result<(&str, Time), dc::ParseError> {
-    let (c, time) = dc::Cursor::from(s).parse_with(parse_clock).validate()?;
-    Ok((c.str()?, time))
+    dc::Cursor::from(s).parse_with(parse_clock).validate()
 }
 
 fn parse_str_traintime(c: &str) -> Result<(&str, TrainTime), dc::ParseError> {
@@ -103,7 +103,7 @@ fn parse_str_traintime(c: &str) -> Result<(&str, TrainTime), dc::ParseError> {
         .ws()
         .parse_with(|c| parse_str_clock(c)) // closure accepted
         .validate()?;
-    Ok((c.str()?, TrainTime { city, arr, dep }))
+    Ok((c, TrainTime { city, arr, dep }))
 }
 
 #[cfg(test)]
@@ -119,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_traintime() {
-        let c = dc::Cursor::from("London Arrive 11:20 PM Depart 11:30 PM");
+        let c = "London Arrive 11:20 PM Depart 11:30 PM";
         let (c, tt) = parse_traintime(c).unwrap();
         assert_eq!(
             tt,
@@ -129,7 +129,7 @@ mod tests {
                 dep: Time::new(23, 30)
             }
         );
-        assert_eq!(c.str().unwrap(), "");
+        assert_eq!(c, "");
     }
 
     #[test]

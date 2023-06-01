@@ -19,11 +19,10 @@ enum FancyColor {
 }
 
 fn parse_fancy_enum(s: &str) -> Result<(&str, FancyColor), dc::ParseError> {
-    let (c, col) = dc::Cursor::from(s)
+    dc::Cursor::from(s)
         .text_alt(FancyColor::VARIANTS)
         .parse_selection()
-        .validate()?;
-    Ok((c.str()?, col))
+        .validate()
 }
 
 #[cfg(test)]

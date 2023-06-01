@@ -25,7 +25,7 @@ pub fn parse_char(s: &str) -> Result<(&str, OneChar), ParseError> {
         _ => unreachable!(),
     };
 
-    Ok((c.str()?, one_char))
+    Ok((c, one_char))
 }
 
 #[derive(PartialEq, Debug, EnumVariantNames, EnumString)]
@@ -54,7 +54,7 @@ pub fn parse_day(s: &str) -> Result<(&str, Day), ParseError> {
         .text_alt(Day::VARIANTS)
         .parse_selection()
         .validate()?;
-    Ok((c.str()?, day))
+    Ok((c, day))
 }
 
 pub fn parse_event(s: &str) -> Result<(&str, Event), ParseError> {
@@ -65,11 +65,10 @@ pub fn parse_event(s: &str) -> Result<(&str, Event), ParseError> {
         .ws()
         .validate()?;
 
-    let s = c1.str()?;
     match (opt_day, opt_time) {
-        (Some(d), Some(t)) => Ok((s, Event::DayTime(d, t))),
-        (None, Some(t)) => Ok((s, Event::TimeOnly(t))),
-        (Some(d), None) => Ok((s, Event::DayOnly(d))),
+        (Some(d), Some(t)) => Ok((c1, Event::DayTime(d, t))),
+        (None, Some(t)) => Ok((c1, Event::TimeOnly(t))),
+        (Some(d), None) => Ok((c1, Event::DayOnly(d))),
         (None, None) => Result::Err(ParseError::NoMatch {
             action: "Must specify day or time (or both)",
             args: "",

@@ -5,11 +5,10 @@ use crate::prelude::dc::{Cursor, ParseError};
 use crate::prelude::*;
 
 pub fn parse_time(s: &str) -> Result<(&str, Time), ParseError> {
-    let (c, t) = Cursor::from(s)
+    Cursor::from(s)
         .chars_any(5..=5)
         .parse_selection::<Time>()
-        .validate()?;
-    Ok((c.str()?, t))
+        .validate()
 }
 
 /// where different text formats represent different data types, an enum variant is appropriate
@@ -26,7 +25,7 @@ pub fn parse_clock(s: &str) -> Result<(&str, Time), ParseError> {
     // Cursor methods move out of the cursor they are called on.
     // Because we might return the cursor 'c1' if parsing AM/PM doesnt succeed,
     // we need to clone 'c1' first
-    if let Ok((c2, ampm)) = c1
+    if let Ok((c2, ampm)) = Cursor::from(c1)
         .clone()
         .text_alt(&["AM", "PM"])
         .parse_selection_as_str() // explicit method as &str doesnt impl FromStr
@@ -38,12 +37,12 @@ pub fn parse_clock(s: &str) -> Result<(&str, Time), ParseError> {
             "pm" => Time::new(time.hours + 12, time.mins),
             _ => unreachable!(),
         };
-        return Ok((c2.str()?, time)); // assume 24 hour clock
+        return Ok((c2, time)); // assume 24 hour clock
     }
     // if we haven't matched on am/pm, return the cursor at c1
     // - c2 is a compile error as c2 not in scope,
     // - c is a compile error as method chains move out of c
-    Ok((c1.str()?, time))
+    Ok((c1, time))
 }
 
 // sometimes if we don't care too much about capturing/not-capturing ws around an optional field,
@@ -65,7 +64,7 @@ pub fn parse_clock_v2(c: &str) -> Result<(&str, Time), ParseError> {
             "PM" => Time::new(time.hours + 12, time.mins),
             _ => unreachable!(),
         };
-        return Ok((c1.str()?, time)); // assume 24 hour clock
+        return Ok((c1, time)); // assume 24 hour clock
     }
 }
 
