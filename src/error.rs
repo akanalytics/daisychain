@@ -1,4 +1,10 @@
-use std::{error::Error, fmt, matches, num::{ParseIntError, ParseFloatError}, str::ParseBoolError, convert::Infallible};
+use std::{
+    convert::Infallible,
+    error::Error,
+    fmt, matches,
+    num::{ParseFloatError, ParseIntError},
+    str::ParseBoolError,
+};
 
 /// Indicates whether an error can be recovered from, and parsing can continue.
 /// Errors such as "config file not found" in parse functions are likely fatal and
@@ -18,6 +24,15 @@ pub enum ParseError {
 impl Recoverable for ParseError {
     fn is_recoverable(&self) -> bool {
         matches!(self, Self::NoMatch { .. })
+    }
+}
+
+impl Default for ParseError {
+    fn default() -> Self {
+        Self::NoMatch {
+            action: "",
+            args: "",
+        }
     }
 }
 
