@@ -6,5 +6,9 @@
 // }
 
 pub fn formatter_str(c: &str) -> String {
-    format!("{:<25}", "|".to_string() + &c[..c.len().min(23)].escape_default().to_string() + &"|")
+    let s = c[..c.len().min(33)].escape_default().to_string();
+    let s = s.replace("\\\"", "\"");
+    let s = s.replace("\\\'", "\'");
+    let s = &s[..s.len().min(33)];
+    format!("{:<35}", "|".to_string() + &s + &"|")
 }

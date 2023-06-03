@@ -235,7 +235,7 @@ pub trait Selectable<'a>: Matchable<'a> {
                 return match text.parse::<T>() {
                     Ok(t) => {
                         self.log_success_with_result(
-                            "get_selection",
+                            "----> get_selection",
                             std::any::type_name::<T>(),
                             &t,
                         );
@@ -262,7 +262,7 @@ pub trait Selectable<'a>: Matchable<'a> {
                 return match text.parse::<T>() {
                     Ok(t) => {
                         self.log_success_with_result(
-                            "get_opt_selection",
+                            "----> get_opt_selection",
                             std::any::type_name::<T>(),
                             &t,
                         );
@@ -270,7 +270,7 @@ pub trait Selectable<'a>: Matchable<'a> {
                     }
                     Err(..) => {
                         self.log_success_with_result(
-                            "get_opt_selection",
+                            "----> get_opt_selection",
                             std::any::type_name::<T>(),
                             "None",
                         );
@@ -286,7 +286,7 @@ pub trait Selectable<'a>: Matchable<'a> {
         self.log_inputs("parse_selection_as_str", "");
         if let Ok(text) = self.get_selection() {
             if let Ok(_cur) = self.str() {
-                self.log_success_with_result("parse_selection_as_str", "", &text);
+                self.log_success_with_result("----> parse_selection_as_str", "", &text);
                 return (self, Some(text));
             }
         }
@@ -645,20 +645,28 @@ pub trait Matchable<'a>: Sized {
     where
         P: FnMut(&'a str) -> std::result::Result<(&'a str, T), ParseError>,
         Self: Clone,
+        T: Debug,
         // C: SelectableCursor<'a>
         // A: IntoIterator<Item = T>
     {
         let mut vec = vec![];
         let Ok(mut str) = self.str() else {
+
             return (self, None)
         };
         loop {
             match (parser)(str.clone()) {
                 Ok((s, t)) => {
+                    self.log_success_with_result(
+                        "----> parse_struct_vec",
+                        std::any::type_name::<T>(),
+                        &t,
+                    );
                     vec.push(t);
                     str = s;
                 }
                 Err(ParseError::NoMatch { .. }) => {
+                    self.log_success("----> parse_struct_vec, len", vec.len());
                     return (self.set_str(str), Some(vec));
                 }
 
@@ -1090,6 +1098,14 @@ impl<'a, T> Matchable<'a> for (Cursor<'a>, Option<T>) {
             action: "validate",
             args: "",
         };
+        if self.0.err.is_none() {
+            self.log_success_with_result(
+                "----> validate",
+                std::any::type_name::<Self::DeTuple>(),
+                "",
+            );
+        }
+
         match self.0.validate() {
             Ok(c) => Ok((c, self.1.ok_or(e)?)),
             Err(e) => Err(e),

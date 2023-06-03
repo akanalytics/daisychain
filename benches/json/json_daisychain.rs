@@ -25,6 +25,7 @@ fn boolean(s: &str) -> Result<(&str, JsonValue), ParseError> {
 fn double(s: &str) -> Result<(&str, JsonValue), ParseError> {
     if let Ok((c, float64)) = Cursor::from(s)
         .debug_context("double")
+        .ws()
         .chars_in(
             1..,
             &['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.'],
@@ -53,6 +54,7 @@ fn string(s: &str) -> Result<(&str, JsonValue), ParseError> {
         .text("\"")
         .chars_not_in(0.., &['"'])
         .parse_selection()
+        .text("\"")
         .ws()
         .validate()
     {
@@ -69,6 +71,7 @@ fn array(s: &str) -> Result<(&str, JsonValue), ParseError> {
         .text("[")
         // .chars_not_in(0.., &[']'])
         .parse_struct_vec(|s| Cursor::from(s).parse_with(json_value).maybe(",").validate())
+        .ws()
         .text("]")
         .ws()
         .validate()
@@ -132,11 +135,22 @@ fn json_value(s: &str) -> Result<(&str, JsonValue), ParseError> {
 }
 
 fn root(s: &str) -> Result<(&str, JsonValue), ParseError> {
-    if let Ok((c, jv)) = Cursor::from(s).parse_with(hash).validate() {
+    if let Ok((c, jv)) = Cursor::from(s)
+        .debug_context("try_hash")
+        .parse_with(hash)
+        .validate()
+    {
         Ok((c, jv))
-    } else if let Ok((c, jv)) = Cursor::from(s).parse_with(array).validate() {
+    } else if let Ok((c, jv)) = Cursor::from(s)
+        .debug_context("try_array")
+        .parse_with(array)
+        .validate()
+    {
         Ok((c, jv))
     } else {
-        Cursor::from(s).parse_with(null).validate()
+        Cursor::from(s)
+            .debug_context("try_null")
+            .parse_with(null)
+            .validate()
     }
 }
