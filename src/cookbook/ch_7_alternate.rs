@@ -1,10 +1,9 @@
 use std::unreachable;
 
 use crate::cookbook::ch_2_simple_example::Time;
-use crate::prelude::dc::{Cursor, ParseError};
 use crate::prelude::*;
 
-pub fn parse_time(s: &str) -> Result<(&str, Time), ParseError> {
+pub fn parse_time(s: &str) -> Result<(&str, Time), ParsingError> {
     Cursor::from(s)
         .chars_any(5..=5)
         .parse_selection::<Time>()
@@ -15,7 +14,7 @@ pub fn parse_time(s: &str) -> Result<(&str, Time), ParseError> {
 ///
 /// where the same data type presents in different formats, simple aternation can be used to try
 /// and match against different parsers. Cursor's can be cloned to save the position for re-parsing
-pub fn parse_clock(s: &str) -> Result<(&str, Time), ParseError> {
+pub fn parse_clock(s: &str) -> Result<(&str, Time), ParsingError> {
     let (c1, time) = Cursor::from(s)
         .chars_any(5..=5)
         .parse_selection::<Time>()
@@ -47,7 +46,7 @@ pub fn parse_clock(s: &str) -> Result<(&str, Time), ParseError> {
 
 // sometimes if we don't care too much about capturing/not-capturing ws around an optional field,
 // its easiest to alt_match on "" as final choice for an optional field
-pub fn parse_clock_v2(c: &str) -> Result<(&str, Time), ParseError> {
+pub fn parse_clock_v2(c: &str) -> Result<(&str, Time), ParsingError> {
     let (c1, time, ampm) = Cursor::from(c)
         .debug_context("clockv2")
         .chars_any(5..=5)
@@ -74,7 +73,7 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_clock() -> Result<(), ParseError> {
+    fn test_parse_clock() -> Result<(), ParsingError> {
         assert_eq!(parse_clock("11:35 AM".into())?.1, Time::new(11, 35));
         assert_eq!(parse_clock("11:59 PM".into())?.1, Time::new(23, 59));
         assert_eq!(parse_clock("01:59".into())?.1, Time::new(1, 59));
@@ -88,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_clock_v2() -> Result<(), ParseError> {
+    fn test_parse_clock_v2() -> Result<(), ParsingError> {
         assert_eq!(parse_clock_v2("11:35 AM".into())?.1, Time::new(11, 35));
         assert_eq!(parse_clock_v2("11:59 PM".into())?.1, Time::new(23, 59));
         assert_eq!(parse_clock_v2("01:59".into())?.1, Time::new(1, 59));

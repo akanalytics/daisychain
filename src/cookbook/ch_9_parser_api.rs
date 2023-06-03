@@ -11,13 +11,13 @@ struct Money(f32);
 /// uses Rust standard trait FromStr
 ///
 impl FromStr for Money {
-    type Err = dc::ParseError;
+    type Err = ParsingError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         // we use a sub-selection to group dollars+cents
         // together into a single selection
         // for parsing into an f32
-        let (_c, float) = dc::Cursor::from(s)
+        let (_c, float) = Cursor::from(s)
             .debug_context("Money FromStr")
             .text("$")
             .select(|c| c.digits(1..).text(".").digits(2..=2))
@@ -32,10 +32,10 @@ impl FromStr for Money {
 ///
 /// the function takes a &str position and returns a Result of (&str, T)
 ///
-fn parse_str_money(s: &str) -> Result<(&str, Money), dc::ParseError> {
+fn parse_str_money(s: &str) -> Result<(&str, Money), ParsingError> {
     // convert from a &str using Cursor::from,
     // and convert back to a &str using cursor.str()
-    let (c, float) = dc::Cursor::from(s)
+    let (c, float) = Cursor::from(s)
         .debug_context("str_money")
         .text("$")
         .select(|c| c.digits(1..).text(".").digits(2..=2))
@@ -49,8 +49,8 @@ fn parse_str_money(s: &str) -> Result<(&str, Money), dc::ParseError> {
 // ///
 // /// the function takes a Cursor and returns a Result of (Cursor, T)
 // ///
-// fn parse_money(s: dc::Cursor) -> Result<(dc::Cursor, Money), dc::ParseError> {
-//     let (c, float) = dc::Cursor::from(s)
+// fn parse_money(s: Cursor) -> Result<(Cursor, Money), dc::ParseError> {
+//     let (c, float) = Cursor::from(s)
 //         .debug_context("money")
 //         .text("$")
 //         .select(|c| c.digits(1..).text(".").digits(2..=2))
@@ -73,8 +73,8 @@ struct MoneyParser {
 /// because we have two references as assoc-function parameters
 /// rust needs to be told about lifetimes for Cursor/&str
 impl MoneyParser {
-    fn parse<'a>(&self, s: &'a str) -> Result<(&'a str, Money), dc::ParseError> {
-        let (c, float) = dc::Cursor::from(s)
+    fn parse<'a>(&self, s: &'a str) -> Result<(&'a str, Money), ParsingError> {
+        let (c, float) = Cursor::from(s)
             .debug_context("MoneyParser::parse")
             .text(&self.currency)
             .select(|c| c.digits(1..).text(".").digits(2..=2))
@@ -84,11 +84,11 @@ impl MoneyParser {
     }
 }
 
-fn parse_lots_of_money(s: &str) -> Result<Vec<Money>, dc::ParseError> {
+fn parse_lots_of_money(s: &str) -> Result<Vec<Money>, ParsingError> {
     let mp = MoneyParser {
         currency: "£".to_string(),
     };
-    let (c, m1, m2) = dc::Cursor::from(s)
+    let (c, m1, m2) = Cursor::from(s)
         .select(|c| c.text("$").digits(1..).text(".").digits(2..=2))
         .parse_selection() // uses <Money as FromStr>
         .ws()
@@ -96,7 +96,7 @@ fn parse_lots_of_money(s: &str) -> Result<Vec<Money>, dc::ParseError> {
         .ws()
         .validate()?;
 
-    let (_c, m3) = dc::Cursor::from(c)
+    let (_c, m3) = Cursor::from(c)
         .parse_with(|c| mp.parse(c)) // uses stir-style free function
         .validate()?;
 

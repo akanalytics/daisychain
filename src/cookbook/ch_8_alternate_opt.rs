@@ -1,5 +1,4 @@
 use crate::cookbook::ch_2_simple_example::Time;
-use crate::prelude::dc::{Cursor, ParseError};
 use crate::prelude::*;
 use strum::VariantNames;
 use strum_macros::{EnumString, EnumVariantNames};
@@ -12,7 +11,7 @@ pub enum OneChar {
     Letter(char),
 }
 
-pub fn parse_char(s: &str) -> Result<(&str, OneChar), ParseError> {
+pub fn parse_char(s: &str) -> Result<(&str, OneChar), ParsingError> {
     let (c, opt_digit, opt_letter) = Cursor::from(s)
         .chars_any(1..=1)
         .parse_opt_selection::<u32>()
@@ -49,7 +48,7 @@ pub enum Event {
     DayOnly(Day),
 }
 
-pub fn parse_day(s: &str) -> Result<(&str, Day), ParseError> {
+pub fn parse_day(s: &str) -> Result<(&str, Day), ParsingError> {
     let (c, day) = Cursor::from(s)
         .text_alt(Day::VARIANTS)
         .parse_selection()
@@ -57,7 +56,7 @@ pub fn parse_day(s: &str) -> Result<(&str, Day), ParseError> {
     Ok((c, day))
 }
 
-pub fn parse_event(s: &str) -> Result<(&str, Event), ParseError> {
+pub fn parse_event(s: &str) -> Result<(&str, Event), ParsingError> {
     let (c1, opt_day, opt_time) = Cursor::from(s)
         .parse_opt_with(parse_day)
         .ws()
@@ -69,7 +68,7 @@ pub fn parse_event(s: &str) -> Result<(&str, Event), ParseError> {
         (Some(d), Some(t)) => Ok((c1, Event::DayTime(d, t))),
         (None, Some(t)) => Ok((c1, Event::TimeOnly(t))),
         (Some(d), None) => Ok((c1, Event::DayOnly(d))),
-        (None, None) => Result::Err(ParseError::NoMatch {
+        (None, None) => Result::Err(ParsingError::NoMatch {
             action: "Must specify day or time (or both)",
             args: "",
         }),
@@ -82,7 +81,7 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_onechar() -> Result<(), ParseError> {
+    fn test_onechar() -> Result<(), ParsingError> {
         use OneChar::*;
         assert_eq!(parse_char("1")?.1, Digit(1));
         assert_eq!(parse_char("A")?.1, Letter('A'));
@@ -95,7 +94,7 @@ mod tests {
     }
 
     #[test]
-    fn test_event() -> Result<(), ParseError> {
+    fn test_event() -> Result<(), ParsingError> {
         use Event::*;
         let t = Time::new(11, 35);
         assert_eq!(parse_event("11:35")?.1, TimeOnly(t));

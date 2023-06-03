@@ -4,7 +4,7 @@ use std::{fmt::Debug, marker::PhantomData};
 use log::Level::Trace;
 use log::{log_enabled, trace};
 
-use crate::{prelude::dc::ParseError, LABEL, LOG_TARGET};
+use crate::{prelude::ParsingError, LABEL, LOG_TARGET};
 
 fn type_suffix(type_name: &str) -> &str {
     if let Some(i) = type_name.rfind("::") {
@@ -48,15 +48,15 @@ pub trait Parser<'a>: Sized {
     }
 }
 
-fn func_ws<'a>(s: &str) -> Result<&str, ParseError> {
+fn func_ws<'a>(s: &str) -> Result<&str, ParsingError> {
     Ok(s.trim_start())
 }
 
-type LEXER = for<'b> fn(&'b str) -> Result<&'b str, ParseError>;
+type LEXER = for<'b> fn(&'b str) -> Result<&'b str, ParsingError>;
 
 impl<'a> StrParser<'a, &'a str> for LEXER {}
 
-pub trait StrParser<'a, O>: Parser<'a, Input = &'a str, Output = O, Error = ParseError> {
+pub trait StrParser<'a, O>: Parser<'a, Input = &'a str, Output = O, Error = ParsingError> {
     fn ws(self) -> Chain<'a, Self, LEXER> {
         self.chain_parser(func_ws)
     }
@@ -99,13 +99,13 @@ where
 {
     type Input = &'a str;
     type Output = (&'a str, T);
-    type Error = ParseError;
+    type Error = ParsingError;
 
     fn validate(&mut self, inp: Self::Input) -> Result<Self::Output, Self::Error> {
         match inp.parse::<T>() {
             Ok(t) => Ok((inp, t)),
             Err(..) => {
-                let e = ParseError::NoMatch {
+                let e = ParsingError::NoMatch {
                     action: "FromStr",
                     args: "",
                 };
@@ -135,13 +135,13 @@ where
 {
     type Input = &'a str;
     type Output = &'a str;
-    type Error = ParseError;
+    type Error = ParsingError;
 
     fn validate(&mut self, inp: Self::Input) -> Result<Self::Output, Self::Error> {
         self.chain.validate(inp).and_then(|s| {
             s.find(self.needle)
                 .map(|i| &s[i..])
-                .ok_or(ParseError::NoMatch {
+                .ok_or(ParsingError::NoMatch {
                     action: "",
                     args: "",
                 })
@@ -158,7 +158,7 @@ pub struct Chain<'a, P1, P2> {
 
 impl<'a, P1, P2, O> StrParser<'a, O> for Chain<'a, P1, P2>
 where
-    Chain<'a, P1, P2>: Parser<'a, Input = &'a str, Output = O, Error = ParseError>,
+    Chain<'a, P1, P2>: Parser<'a, Input = &'a str, Output = O, Error = ParsingError>,
     P1: StrParser<'a, O>,
     P2: StrParser<'a, &'a str>,
 {
@@ -352,9 +352,9 @@ pub struct Par<T>(T);
 
 impl<'a, F2> Parser<'a> for F2
 where
-    F2: FnMut(&'a str) -> Result<&'a str, ParseError>,
+    F2: FnMut(&'a str) -> Result<&'a str, ParsingError>,
 {
-    type Error = ParseError;
+    type Error = ParsingError;
     type Input = &'a str;
     type Output = &'a str;
     fn name(&self, indent: &str) -> String {
@@ -366,7 +366,7 @@ where
             error = type_suffix(std::any::type_name::<Self::Error>())
         )
     }
-    fn validate(&mut self, s: &'a str) -> Result<&'a str, ParseError> {
+    fn validate(&mut self, s: &'a str) -> Result<&'a str, ParsingError> {
         // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
         let func = self;
         match (func)(s) {
@@ -378,9 +378,9 @@ where
 
 impl<'a, F2, T: Debug> Parser<'a> for Par<F2>
 where
-    F2: FnMut(&'a str) -> Result<(&'a str, T), ParseError>,
+    F2: FnMut(&'a str) -> Result<(&'a str, T), ParsingError>,
 {
-    type Error = ParseError;
+    type Error = ParsingError;
     type Input = &'a str;
     type Output = (&'a str, T);
     fn name(&self, indent: &str) -> String {
@@ -392,7 +392,7 @@ where
             error = type_suffix(std::any::type_name::<Self::Error>())
         )
     }
-    fn validate(&mut self, s: &'a str) -> Result<(&'a str, T), ParseError> {
+    fn validate(&mut self, s: &'a str) -> Result<(&'a str, T), ParsingError> {
         // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
         let Par(func) = self;
         match (func)(s) {
@@ -417,7 +417,7 @@ impl<'a> StrParser<'a, &'a str> for SP {}
 
 impl<'a> Parser<'a> for SP {
     type Input = &'a str;
-    type Error = ParseError;
+    type Error = ParsingError;
     type Output = &'a str;
     fn name(&self, indent: &str) -> String {
         format!(
@@ -461,7 +461,7 @@ mod tests {
     use super::DeTuple;
     use crate::{
         combo::{Par, Parser, SP},
-        prelude::dc::ParseError,
+        prelude::ParsingError,
     };
     use test_log::test;
     #[test]
@@ -474,15 +474,15 @@ mod tests {
     fn test_combo() {
         // define a simple lexer+parser
         assert_eq!(SP.validate("cat").unwrap(), "cat");
-        fn tail_lexer<'a>(s: &'a str) -> Result<&'a str, ParseError> {
+        fn tail_lexer<'a>(s: &'a str) -> Result<&'a str, ParsingError> {
             Ok(&s[1..])
         }
 
-        fn ws<'a>(s: &'a str) -> Result<&'a str, ParseError> {
+        fn ws<'a>(s: &'a str) -> Result<&'a str, ParsingError> {
             Ok(s.trim_start())
         }
 
-        fn num_parser<'a>(s: &'a str) -> Result<(&'a str, i32), ParseError> {
+        fn num_parser<'a>(s: &'a str) -> Result<(&'a str, i32), ParsingError> {
             Ok((&s[1..], s[0..=0].parse::<i32>()?))
         }
         #[derive(Default)]

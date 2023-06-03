@@ -30,9 +30,9 @@ mod tests {
     #[test]
     fn test_email() {
         assert_eq!(
-            email(dc::Cursor::from("andy@google.com")).str().unwrap(),
+            email(Cursor::from("andy@google.com")).str().unwrap(),
             ""
         );
-        assert_eq!(email(dc::Cursor::from("google.com")).str().is_err(), true);
+        assert_eq!(email(Cursor::from("google.com")).str().is_err(), true);
     }
 }

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use daisychain::prelude::dc::{Cursor, ParseError};
 use daisychain::prelude::*;
 
 use crate::JsonValue;
@@ -9,7 +8,7 @@ pub fn daisychain_parser(s: &str) -> JsonValue {
     root(s).unwrap().1
 }
 
-fn boolean(s: &str) -> Result<(&str, JsonValue), ParseError> {
+fn boolean(s: &str) -> Result<(&str, JsonValue), ParsingError> {
     if let Ok((c, boolean)) = Cursor::from(s)
         .debug_context("boolean")
         .text_alt(&["true", "false"])
@@ -18,11 +17,11 @@ fn boolean(s: &str) -> Result<(&str, JsonValue), ParseError> {
     {
         Ok((c, JsonValue::Boolean(boolean)))
     } else {
-        Err(ParseError::default())
+        Err(ParsingError::default())
     }
 }
 
-fn double(s: &str) -> Result<(&str, JsonValue), ParseError> {
+fn double(s: &str) -> Result<(&str, JsonValue), ParsingError> {
     if let Ok((c, float64)) = Cursor::from(s)
         .debug_context("double")
         .ws()
@@ -35,19 +34,19 @@ fn double(s: &str) -> Result<(&str, JsonValue), ParseError> {
     {
         Ok((c, JsonValue::Num(float64)))
     } else {
-        Err(ParseError::default())
+        Err(ParsingError::default())
     }
 }
 
-fn null(s: &str) -> Result<(&str, JsonValue), ParseError> {
+fn null(s: &str) -> Result<(&str, JsonValue), ParsingError> {
     if let Ok(c) = Cursor::from(s).text("null").validate() {
         Ok((c, JsonValue::Null))
     } else {
-        Err(ParseError::default())
+        Err(ParsingError::default())
     }
 }
 
-fn string(s: &str) -> Result<(&str, JsonValue), ParseError> {
+fn string(s: &str) -> Result<(&str, JsonValue), ParsingError> {
     if let Ok((c, s)) = Cursor::from(s)
         .debug_context("string")
         .ws()
@@ -60,11 +59,11 @@ fn string(s: &str) -> Result<(&str, JsonValue), ParseError> {
     {
         Ok((c, JsonValue::Str(s)))
     } else {
-        Err(ParseError::default())
+        Err(ParsingError::default())
     }
 }
 
-fn array(s: &str) -> Result<(&str, JsonValue), ParseError> {
+fn array(s: &str) -> Result<(&str, JsonValue), ParsingError> {
     if let Ok((c, v)) = Cursor::from(s)
         .debug_context("array")
         .ws()
@@ -78,11 +77,11 @@ fn array(s: &str) -> Result<(&str, JsonValue), ParseError> {
     {
         Ok((c, JsonValue::Array(v)))
     } else {
-        Err(ParseError::default())
+        Err(ParsingError::default())
     }
 }
 
-fn key_value(s: &str) -> Result<(&str, (&str, JsonValue)), ParseError> {
+fn key_value(s: &str) -> Result<(&str, (&str, JsonValue)), ParsingError> {
     if let Ok((c, k, v)) = Cursor::from(s)
         .ws()
         .chars_not_in(0.., &[':'])
@@ -95,11 +94,11 @@ fn key_value(s: &str) -> Result<(&str, (&str, JsonValue)), ParseError> {
     {
         Ok((c, (k, v)))
     } else {
-        Err(ParseError::default())
+        Err(ParsingError::default())
     }
 }
 
-fn hash(s: &str) -> Result<(&str, JsonValue), ParseError> {
+fn hash(s: &str) -> Result<(&str, JsonValue), ParsingError> {
     if let Ok((c, vec)) = Cursor::from(s)
         .debug_context("hash")
         .ws()
@@ -114,11 +113,11 @@ fn hash(s: &str) -> Result<(&str, JsonValue), ParseError> {
             vec.into_iter().map(|(k, v)| (k.to_owned(), v)).collect();
         Ok((c, JsonValue::Object(map)))
     } else {
-        Err(ParseError::default())
+        Err(ParsingError::default())
     }
 }
 
-fn json_value(s: &str) -> Result<(&str, JsonValue), ParseError> {
+fn json_value(s: &str) -> Result<(&str, JsonValue), ParsingError> {
     if let Ok((c, jv)) = Cursor::from(s).parse_with(hash).validate() {
         Ok((c, jv))
     } else if let Ok((c, jv)) = Cursor::from(s).parse_with(array).validate() {
@@ -134,7 +133,7 @@ fn json_value(s: &str) -> Result<(&str, JsonValue), ParseError> {
     }
 }
 
-fn root(s: &str) -> Result<(&str, JsonValue), ParseError> {
+fn root(s: &str) -> Result<(&str, JsonValue), ParsingError> {
     if let Ok((c, jv)) = Cursor::from(s)
         .debug_context("try_hash")
         .parse_with(hash)

@@ -1,4 +1,4 @@
-use crate::prelude::{dc::Cursor, dc::ParseError, *};
+use crate::prelude::{Cursor, ParsingError, *};
 
 #[derive(PartialEq, Debug)]
 enum Number {
@@ -9,7 +9,7 @@ enum Number {
 
 /// the idea is to use `if let` to try and parse the enum variants in succession.
 ///
-fn parse_number(s: &str) -> Result<(&str, Number), ParseError> {
+fn parse_number(s: &str) -> Result<(&str, Number), ParsingError> {
     // try first variant (using clone to save the initial cursor position)
     if let Ok((c, s)) = Cursor::from(s)
         .clone()
@@ -45,7 +45,7 @@ fn parse_number(s: &str) -> Result<(&str, Number), ParseError> {
         return Ok((c, Number::Decimal(int)));
     }
 
-    Result::Err(ParseError::NoMatch {
+    Result::Err(ParsingError::NoMatch {
         action: "Unknown format",
         args: "",
     })

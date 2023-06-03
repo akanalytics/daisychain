@@ -14,20 +14,20 @@ pub trait Recoverable {
 }
 
 #[derive(Debug)]
-pub enum ParseError {
+pub enum ParsingError {
     Fatal(Option<Box<dyn Error>>),
     NoMatch {
         action: &'static str,
         args: &'static str,
     },
 }
-impl Recoverable for ParseError {
+impl Recoverable for ParsingError {
     fn is_recoverable(&self) -> bool {
         matches!(self, Self::NoMatch { .. })
     }
 }
 
-impl Default for ParseError {
+impl Default for ParsingError {
     fn default() -> Self {
         Self::NoMatch {
             action: "",
@@ -36,40 +36,40 @@ impl Default for ParseError {
     }
 }
 
-impl From<ParseIntError> for ParseError {
+impl From<ParseIntError> for ParsingError {
     fn from(_value: ParseIntError) -> Self {
-        ParseError::NoMatch {
+        ParsingError::NoMatch {
             action: "parse int error",
             args: "",
         }
     }
 }
 
-impl From<ParseFloatError> for ParseError {
+impl From<ParseFloatError> for ParsingError {
     fn from(_value: ParseFloatError) -> Self {
-        ParseError::NoMatch {
+        ParsingError::NoMatch {
             action: "parse float error",
             args: "",
         }
     }
 }
 
-impl From<ParseBoolError> for ParseError {
+impl From<ParseBoolError> for ParsingError {
     fn from(_value: ParseBoolError) -> Self {
-        ParseError::NoMatch {
+        ParsingError::NoMatch {
             action: "parse bool error",
             args: "",
         }
     }
 }
 
-impl From<Infallible> for ParseError {
+impl From<Infallible> for ParsingError {
     fn from(_value: Infallible) -> Self {
         unreachable!()
     }
 }
 
-impl Clone for ParseError {
+impl Clone for ParsingError {
     #[inline]
     fn clone(&self) -> Self {
         match self {
@@ -80,11 +80,11 @@ impl Clone for ParseError {
 }
 
 #[inline]
-pub fn failure(action: &'static str, _args: &str) -> ParseError {
-    ParseError::NoMatch { action, args: "" }
+pub fn failure(action: &'static str, _args: &str) -> ParsingError {
+    ParsingError::NoMatch { action, args: "" }
 }
 
-impl fmt::Display for ParseError {
+impl fmt::Display for ParsingError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::Fatal(e) => write!(
@@ -99,4 +99,4 @@ impl fmt::Display for ParseError {
         Ok(())
     }
 }
-impl std::error::Error for ParseError {}
+impl std::error::Error for ParsingError {}

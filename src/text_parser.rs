@@ -11,13 +11,13 @@ use crate::{
     cursor::Selection,
     error,
     logging::Loggable,
-    prelude::{dc::Cursor, dc::ParseError},
+    prelude::{Cursor, ParsingError},
     LABEL, LOG_TARGET,
 };
 
 fn cursorify<'a, T>(
-    mut f: impl FnMut(&'a str) -> Result<(&'a str, T), ParseError>,
-) -> impl FnMut(Cursor<'a>) -> Result<(Cursor<'a>, T), ParseError> {
+    mut f: impl FnMut(&'a str) -> Result<(&'a str, T), ParsingError>,
+) -> impl FnMut(Cursor<'a>) -> Result<(Cursor<'a>, T), ParsingError> {
     move |c: Cursor<'a>| (f)(c.str()?).map(|(s, t)| (Cursor::from(s), t))
 }
 
@@ -109,7 +109,7 @@ where
     let (start, end) = start_end(rb);
     if let Some(end) = end {
         if end < 0 {
-            let e = ParseError::NoMatch { action, args: "" };
+            let e = ParsingError::NoMatch { action, args: "" };
             cur.log_failure(action, args, &e);
             return cur.set_error(e);
         }
@@ -130,7 +130,7 @@ where
     } else {
         let len = s.chars().count();
         if len < start {
-            let e = ParseError::NoMatch {
+            let e = ParsingError::NoMatch {
                 action,
                 args: "len>start",
             };
@@ -148,7 +148,7 @@ where
         }
     }
     // not found and len < end
-    let e = ParseError::NoMatch {
+    let e = ParsingError::NoMatch {
         action,
         args: "no match",
     };
@@ -184,7 +184,7 @@ pub trait Selectable<'a>: Matchable<'a> {
     // fn parse(self) -> std::result::Result<Self::Cursor, BadMatch> {
     //     CursorHelper::parse(self)
     // }
-    fn get_selection(&self) -> Result<&'a str, ParseError>;
+    fn get_selection(&self) -> Result<&'a str, ParsingError>;
     fn selection_end(self) -> Self;
     fn selection_start(self) -> Self;
 
@@ -242,7 +242,7 @@ pub trait Selectable<'a>: Matchable<'a> {
                         (self, Some(t))
                     }
                     Err(..) => {
-                        let e = ParseError::NoMatch {
+                        let e = ParsingError::NoMatch {
                             action: "FromStr",
                             args: "",
                         };
@@ -327,7 +327,7 @@ pub trait Selectable<'a>: Matchable<'a> {
             if let Ok(t) = res_t {
                 vec.extend(std::iter::once(t));
             } else {
-                return self.set_error(ParseError::NoMatch {
+                return self.set_error(ParsingError::NoMatch {
                     action: "",
                     args: "",
                 });
@@ -395,9 +395,9 @@ pub trait Matchable<'a>: Sized {
 
     fn cursor(&self) -> &Self::Cursor;
 
-    fn str(&self) -> std::result::Result<&'a str, ParseError>;
+    fn str(&self) -> std::result::Result<&'a str, ParsingError>;
     fn set_str(self, s: &'a str) -> Self;
-    fn set_error(self, e: ParseError) -> Self;
+    fn set_error(self, e: ParsingError) -> Self;
 
     #[inline]
     fn debug_context(self, span_name: &'static str) -> Self {
@@ -410,7 +410,7 @@ pub trait Matchable<'a>: Sized {
     }
 
     // fn validate(self) -> std::result::Result<Self, ParseError>;
-    fn validate(self) -> std::result::Result<Self::DeTuple, ParseError>;
+    fn validate(self) -> std::result::Result<Self::DeTuple, ParsingError>;
 
     fn is_skip(&self) -> bool {
         self.str().is_err()
@@ -643,7 +643,7 @@ pub trait Matchable<'a>: Sized {
 
     fn parse_struct_vec<P, T>(self, mut parser: P) -> (Self, Option<Vec<T>>)
     where
-        P: FnMut(&'a str) -> std::result::Result<(&'a str, T), ParseError>,
+        P: FnMut(&'a str) -> std::result::Result<(&'a str, T), ParsingError>,
         Self: Clone,
         T: Debug,
         // C: SelectableCursor<'a>
@@ -665,7 +665,7 @@ pub trait Matchable<'a>: Sized {
                     vec.push(t);
                     str = s;
                 }
-                Err(ParseError::NoMatch { .. }) => {
+                Err(ParsingError::NoMatch { .. }) => {
                     self.log_success("----> parse_struct_vec, len", vec.len());
                     return (self.set_str(str), Some(vec));
                 }
@@ -677,9 +677,9 @@ pub trait Matchable<'a>: Sized {
         }
     }
 
-    fn parse_struct_vec_to<P, X, T>(self, mut parser: P, vec: &mut X) -> Result<Self, ParseError>
+    fn parse_struct_vec_to<P, X, T>(self, mut parser: P, vec: &mut X) -> Result<Self, ParsingError>
     where
-        P: FnMut(&'a str) -> std::result::Result<(&'a str, T), ParseError>,
+        P: FnMut(&'a str) -> std::result::Result<(&'a str, T), ParsingError>,
         X: Extend<T>,
         Self: Clone,
         // A: IntoIterator<Item = T>
@@ -691,10 +691,10 @@ pub trait Matchable<'a>: Sized {
                     vec.extend(std::iter::once(t));
                     str = s;
                 }
-                Err(ParseError::NoMatch { .. }) => return Ok(self.set_str(str)),
+                Err(ParsingError::NoMatch { .. }) => return Ok(self.set_str(str)),
 
-                Err(ParseError::Fatal(e)) => {
-                    return Err(ParseError::Fatal(e));
+                Err(ParsingError::Fatal(e)) => {
+                    return Err(ParsingError::Fatal(e));
                 }
             }
         }
@@ -703,7 +703,7 @@ pub trait Matchable<'a>: Sized {
     #[deprecated(since = "0.0.3", note = "use function parse_with instead")]
     fn parse_with_str<P, T>(self, mut parser: P) -> (Self, Option<T>)
     where
-        P: FnMut(&str) -> std::result::Result<(&str, T), ParseError>,
+        P: FnMut(&str) -> std::result::Result<(&str, T), ParsingError>,
     {
         if let Ok(s) = self.str() {
             if let Ok(outcome) = (parser)(s) {
@@ -742,7 +742,7 @@ pub trait Matchable<'a>: Sized {
 
     fn parse_opt_with<P, C, T>(self, mut parser: P) -> (Self, Option<Option<T>>)
     where
-        P: crate::parser::Parser<'a, C, T, Error = ParseError>,
+        P: crate::parser::Parser<'a, C, T, Error = ParsingError>,
         Self::Cursor: Clone,
         Self::Cursor: TryInto<C> + From<C>,
         C: TryInto<&'a str>,
@@ -755,7 +755,7 @@ pub trait Matchable<'a>: Sized {
         // <Self as Matchable<'a>>::Cursor: 'a,
     {
         if !self.is_skip() {
-            let res: Result<(C, T), ParseError> = parser.parse(
+            let res: Result<(C, T), ParsingError> = parser.parse(
                 self.cursor()
                     .clone()
                     .try_into()
@@ -774,7 +774,7 @@ pub trait Matchable<'a>: Sized {
 
     fn parse_with<P, C, T>(self, mut parser: P) -> (Self, Option<T>)
     where
-        P: crate::parser::Parser<'a, C, T, Error = ParseError>,
+        P: crate::parser::Parser<'a, C, T, Error = ParsingError>,
         Self::Cursor: Clone,
         Self::Cursor: TryInto<C> + From<C>,
         C: TryInto<&'a str>,
@@ -787,7 +787,7 @@ pub trait Matchable<'a>: Sized {
         // <Self as Matchable<'a>>::Cursor: 'a,
     {
         if !self.is_skip() {
-            let res: Result<(C, T), ParseError> = parser.parse(
+            let res: Result<(C, T), ParsingError> = parser.parse(
                 self.cursor()
                     .clone()
                     .try_into()
@@ -797,7 +797,7 @@ pub trait Matchable<'a>: Sized {
                 Ok((cur_c, t)) => match cur_c.try_into() {
                     Ok(s) => (self.set_str(s), Some(t)),
                     Err(_e) => (
-                        self.set_error(ParseError::NoMatch {
+                        self.set_error(ParsingError::NoMatch {
                             action: "",
                             args: "",
                         }),
@@ -906,7 +906,7 @@ impl<'a> Matchable<'a> for Option<&'a str> {
     }
 
     #[inline]
-    fn str(&self) -> Result<&'a str, ParseError> {
+    fn str(&self) -> Result<&'a str, ParsingError> {
         self.ok_or_else(|| error::failure("str on erroring cursor", ""))
     }
 
@@ -916,7 +916,7 @@ impl<'a> Matchable<'a> for Option<&'a str> {
     }
 
     #[inline]
-    fn set_error(self, _e: ParseError) -> Self {
+    fn set_error(self, _e: ParsingError) -> Self {
         None
     }
 
@@ -941,7 +941,7 @@ impl<'a> Matchable<'a> for Option<&'a str> {
     //     }
     // }
 
-    fn validate(self) -> Result<Self::DeTuple, ParseError> {
+    fn validate(self) -> Result<Self::DeTuple, ParsingError> {
         match self.str() {
             Ok(_s) => Ok(self),
             Err(e) => Err(e),
@@ -961,7 +961,7 @@ impl<'a> Matchable<'a> for Option<&'a str> {
 // }
 
 impl<'a> Selectable<'a> for Cursor<'a> {
-    fn get_selection(&self) -> Result<&'a str, ParseError> {
+    fn get_selection(&self) -> Result<&'a str, ParsingError> {
         self.log_inputs("get_selection", "");
         if let Some(cur) = self.cur {
             let (s, e) = self.selection.selection(cur);
@@ -1010,7 +1010,7 @@ impl<'a> Matchable<'a> for Cursor<'a> {
     type DeTuple = &'a str;
 
     #[inline]
-    fn str(&self) -> Result<&'a str, ParseError> {
+    fn str(&self) -> Result<&'a str, ParsingError> {
         self.cur.str()
     }
 
@@ -1029,7 +1029,7 @@ impl<'a> Matchable<'a> for Cursor<'a> {
     }
 
     #[inline]
-    fn set_error(self, e: ParseError) -> Self {
+    fn set_error(self, e: ParsingError) -> Self {
         Self {
             selection: self.selection,
             cur: None,
@@ -1042,7 +1042,7 @@ impl<'a> Matchable<'a> for Cursor<'a> {
     // fn validate(self) -> Result<Self, ParseError> {
     // }
 
-    fn validate(self) -> Result<Self::DeTuple, ParseError> {
+    fn validate(self) -> Result<Self::DeTuple, ParsingError> {
         match self.err {
             None => Ok(self.str()?),
             Some(e) => Err(e),
@@ -1051,7 +1051,7 @@ impl<'a> Matchable<'a> for Cursor<'a> {
 }
 
 impl<'a, T> Selectable<'a> for (Cursor<'a>, Option<T>) {
-    fn get_selection(&self) -> Result<&'a str, ParseError> {
+    fn get_selection(&self) -> Result<&'a str, ParsingError> {
         self.0.get_selection()
     }
 
@@ -1069,7 +1069,7 @@ impl<'a, T> Matchable<'a> for (Cursor<'a>, Option<T>) {
     type DeTuple = (&'a str, T);
 
     #[inline]
-    fn str(&self) -> Result<&'a str, ParseError> {
+    fn str(&self) -> Result<&'a str, ParsingError> {
         self.0.str()
     }
 
@@ -1083,7 +1083,7 @@ impl<'a, T> Matchable<'a> for (Cursor<'a>, Option<T>) {
     }
 
     #[inline]
-    fn set_error(self, e: ParseError) -> Self {
+    fn set_error(self, e: ParsingError) -> Self {
         (self.0.set_error(e), self.1)
     }
 
@@ -1093,8 +1093,8 @@ impl<'a, T> Matchable<'a> for (Cursor<'a>, Option<T>) {
     // }
 
     #[inline]
-    fn validate(self) -> Result<Self::DeTuple, ParseError> {
-        let e = ParseError::NoMatch {
+    fn validate(self) -> Result<Self::DeTuple, ParsingError> {
+        let e = ParsingError::NoMatch {
             action: "validate",
             args: "",
         };
@@ -1118,7 +1118,7 @@ impl<'a, T1, T2> Matchable<'a> for ((Cursor<'a>, Option<T1>), Option<T2>) {
     type DeTuple = (&'a str, T1, T2);
 
     #[inline]
-    fn str(&self) -> Result<&'a str, ParseError> {
+    fn str(&self) -> Result<&'a str, ParsingError> {
         self.0.str()
     }
 
@@ -1132,7 +1132,7 @@ impl<'a, T1, T2> Matchable<'a> for ((Cursor<'a>, Option<T1>), Option<T2>) {
     }
 
     #[inline]
-    fn set_error(self, e: ParseError) -> Self {
+    fn set_error(self, e: ParsingError) -> Self {
         (self.0.set_error(e), self.1)
     }
 
@@ -1142,8 +1142,8 @@ impl<'a, T1, T2> Matchable<'a> for ((Cursor<'a>, Option<T1>), Option<T2>) {
     // }
 
     #[inline]
-    fn validate(self) -> Result<Self::DeTuple, ParseError> {
-        let e = ParseError::NoMatch {
+    fn validate(self) -> Result<Self::DeTuple, ParsingError> {
+        let e = ParsingError::NoMatch {
             action: "validate",
             args: "",
         };
@@ -1157,7 +1157,7 @@ impl<'a, T1, T2, T3> Matchable<'a> for (((Cursor<'a>, Option<T1>), Option<T2>), 
     type DeTuple = (&'a str, T1, T2, T3);
 
     #[inline]
-    fn str(&self) -> Result<&'a str, ParseError> {
+    fn str(&self) -> Result<&'a str, ParsingError> {
         self.0.str()
     }
 
@@ -1171,7 +1171,7 @@ impl<'a, T1, T2, T3> Matchable<'a> for (((Cursor<'a>, Option<T1>), Option<T2>), 
     }
 
     #[inline]
-    fn set_error(self, e: ParseError) -> Self {
+    fn set_error(self, e: ParsingError) -> Self {
         (self.0.set_error(e), self.1)
     }
 
@@ -1181,8 +1181,8 @@ impl<'a, T1, T2, T3> Matchable<'a> for (((Cursor<'a>, Option<T1>), Option<T2>), 
     // }
 
     #[inline]
-    fn validate(self) -> Result<Self::DeTuple, ParseError> {
-        let e3 = ParseError::NoMatch {
+    fn validate(self) -> Result<Self::DeTuple, ParsingError> {
+        let e3 = ParsingError::NoMatch {
             action: "validate",
             args: "",
         };
@@ -1192,7 +1192,7 @@ impl<'a, T1, T2, T3> Matchable<'a> for (((Cursor<'a>, Option<T1>), Option<T2>), 
 }
 
 impl<'a, T1, T2> Selectable<'a> for ((Cursor<'a>, Option<T1>), Option<T2>) {
-    fn get_selection(&self) -> Result<&'a str, ParseError> {
+    fn get_selection(&self) -> Result<&'a str, ParsingError> {
         self.0.get_selection()
     }
 
@@ -1206,7 +1206,7 @@ impl<'a, T1, T2> Selectable<'a> for ((Cursor<'a>, Option<T1>), Option<T2>) {
 }
 
 impl<'a, T1, T2, T3> Selectable<'a> for (((Cursor<'a>, Option<T1>), Option<T2>), Option<T3>) {
-    fn get_selection(&self) -> Result<&'a str, ParseError> {
+    fn get_selection(&self) -> Result<&'a str, ParsingError> {
         self.0.get_selection()
     }
 
@@ -1224,7 +1224,7 @@ mod tests {
 
     use std::ops::RangeBounds;
 
-    use crate::text_parser::{Bind, ParseError, Selectable};
+    use crate::text_parser::{Bind, ParsingError, Selectable};
 
     use super::{Cursor, Matchable};
     use test_log::test;
@@ -1247,7 +1247,7 @@ mod tests {
     #[derive(PartialEq, Debug)]
     struct Time(i32, i32, f64);
 
-    fn parse_time_v1(s: &str) -> Result<(&str, Time), ParseError> {
+    fn parse_time_v1(s: &str) -> Result<(&str, Time), ParsingError> {
         let (mut hh, mut mm, mut sss) = (0_i32, 0_i32, 0_f64);
         let c = Cursor::from(s)
             .digits(2..=2)
@@ -1265,7 +1265,7 @@ mod tests {
         Ok((c, Time(hh, mm, sss)))
     }
 
-    fn parse_time_v2(s: &str) -> Result<(&str, Time), ParseError> {
+    fn parse_time_v2(s: &str) -> Result<(&str, Time), ParsingError> {
         let (mut hh, mut mm, mut sss) = (0_i32, 0_i32, 0_f64);
         let c = Cursor::from(s)
             .digits(2..=2)
@@ -1287,7 +1287,7 @@ mod tests {
         Ok((c, Time(hh, mm, sss)))
     }
 
-    fn parse_time_v3(s: &str) -> Result<(&str, Time), ParseError> {
+    fn parse_time_v3(s: &str) -> Result<(&str, Time), ParsingError> {
         let (c, hh, mm, sss) = Cursor::from(s)
             .digits(2..=2)
             .parse_selection()
@@ -1301,7 +1301,7 @@ mod tests {
         Ok((c, Time(hh, mm, sss)))
     }
 
-    fn parse_time_v4<'a>(s: &str) -> Result<(&str, Time), ParseError> {
+    fn parse_time_v4<'a>(s: &str) -> Result<(&str, Time), ParsingError> {
         let (c, hh, mm, sss) = Cursor::from(s)
             .selection_start()
             .digits(2..=2)
@@ -1451,7 +1451,7 @@ mod tests {
         assert_eq!(res2.is_ok(), true);
         assert_eq!(ll2.len(), 5, "linkedlist:{:?}", ll2);
 
-        fn parse_str_time_array(s: &str) -> Result<(&str, Vec<Time>), ParseError> {
+        fn parse_str_time_array(s: &str) -> Result<(&str, Vec<Time>), ParsingError> {
             let (c, vec) = Cursor::from(s)
                 .debug_context("str time array")
                 .text("{")
@@ -1475,7 +1475,7 @@ mod tests {
         assert_eq!(res.1.len(), 3);
         assert_eq!(res.0, "");
 
-        fn parse_time_array(s: &str) -> Result<(&str, Vec<Time>), ParseError> {
+        fn parse_time_array(s: &str) -> Result<(&str, Vec<Time>), ParsingError> {
             let (c, vec) = Cursor::from(s)
                 .debug_context("time array")
                 .text("{")

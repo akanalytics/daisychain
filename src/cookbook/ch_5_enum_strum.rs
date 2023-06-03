@@ -18,8 +18,8 @@ enum FancyColor {
     Lime,
 }
 
-fn parse_fancy_enum(s: &str) -> Result<(&str, FancyColor), dc::ParseError> {
-    dc::Cursor::from(s)
+fn parse_fancy_enum(s: &str) -> Result<(&str, FancyColor), ParsingError> {
+    Cursor::from(s)
         .text_alt(FancyColor::VARIANTS)
         .parse_selection()
         .validate()
@@ -31,7 +31,7 @@ mod tests {
     use test_log::test;
 
     #[test]
-    fn test_parse_enum() -> Result<(), dc::ParseError> {
+    fn test_parse_enum() -> Result<(), ParsingError> {
         let (c, color) = parse_fancy_enum("Burgundy Arrow".into())?;
         assert_eq!(color, FancyColor::Burgundy);
         assert_eq!(c, " Arrow");

@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::prelude::{dc::Cursor, dc::ParseError, Matchable};
+use crate::prelude::{Cursor, ParsingError, Matchable};
 
 pub trait Parser<'c, C, T> {
     type Error;
@@ -37,11 +37,11 @@ pub trait Parser<'c, C, T> {
 // }
 
 pub type StrFunc<T, E> = for<'c> fn(&'c str) -> Result<(&'c str, T), E>;
-pub type StrMethod<T, X> = for<'c> fn(x: &'c X, &'c str) -> Result<(&'c str, T), ParseError>;
+pub type StrMethod<T, X> = for<'c> fn(x: &'c X, &'c str) -> Result<(&'c str, T), ParsingError>;
 
-impl<'c, T> Parser<'c, Cursor<'c>, T> for StrFunc<T, ParseError> {
-    type Error = ParseError;
-    fn parse(&mut self, c: Cursor<'c>) -> Result<(Cursor<'c>, T), ParseError> {
+impl<'c, T> Parser<'c, Cursor<'c>, T> for StrFunc<T, ParsingError> {
+    type Error = ParsingError;
+    fn parse(&mut self, c: Cursor<'c>) -> Result<(Cursor<'c>, T), ParsingError> {
         trace!("#### fn(&'b str): {s}", s = c.cur.unwrap_or("-"));
         let (s, t) = (self)(c.str()?)?;
         Ok((Cursor::from(s), t))
@@ -50,18 +50,18 @@ impl<'c, T> Parser<'c, Cursor<'c>, T> for StrFunc<T, ParseError> {
 
 impl<'c, C, T, F> Parser<'c, C, T> for F
 where
-    F: FnMut(C) -> Result<(C, T), ParseError>,
+    F: FnMut(C) -> Result<(C, T), ParsingError>,
 {
-    type Error = ParseError;
-    fn parse(&mut self, s: C) -> Result<(C, T), ParseError> {
+    type Error = ParsingError;
+    fn parse(&mut self, s: C) -> Result<(C, T), ParsingError> {
         // trace!("#### FnMut(SelectableStr): {s}", s = s.cur.unwrap_or("-"));
         (self)(s)
     }
 }
 
 impl<'c, T, X> Parser<'c, Cursor<'c>, T> for (&'c X, StrMethod<T, X>) {
-    type Error = ParseError;
-    fn parse(&mut self, c: Cursor<'c>) -> Result<(Cursor<'c>, T), ParseError> {
+    type Error = ParsingError;
+    fn parse(&mut self, c: Cursor<'c>) -> Result<(Cursor<'c>, T), ParsingError> {
         trace!("#### fn(context, &str): {s}", s = c.cur.unwrap_or("-"));
         let (s, t) = (self.1)(self.0, c.str()?)?;
         Ok((Cursor::from(s), t))
@@ -72,13 +72,13 @@ impl<'c, T, X> Parser<'c, Cursor<'c>, T> for (&'c X, StrMethod<T, X>) {
 mod tests {
     use crate::{
         parser::{Parser, StrFunc, StrMethod},
-        prelude::{dc::Cursor, dc::ParseError},
+        prelude::{Cursor, ParsingError},
     };
 
     #[test]
     fn test_casting() {
         // define a simple lexer+parser
-        fn lp<'a, T>(s: Cursor<'a>, mut p: impl Parser<'a, Cursor<'a>, T, Error = ParseError>) {
+        fn lp<'a, T>(s: Cursor<'a>, mut p: impl Parser<'a, Cursor<'a>, T, Error = ParsingError>) {
             let _ = p.parse(s);
         }
 
@@ -86,25 +86,25 @@ mod tests {
         struct StructEx;
 
         impl StructEx {
-            fn parse_ex2<'a>(&self, s: &'a str) -> Result<(&'a str, String), ParseError> {
+            fn parse_ex2<'a>(&self, s: &'a str) -> Result<(&'a str, String), ParsingError> {
                 Ok((s, String::from("Example2")))
             }
-            fn parse_ex4<'a>(&self, s: Cursor<'a>) -> Result<(Cursor<'a>, String), ParseError> {
+            fn parse_ex4<'a>(&self, s: Cursor<'a>) -> Result<(Cursor<'a>, String), ParsingError> {
                 Ok((s, String::from("Example4")))
             }
         }
 
-        fn parse_ex1(s: &str) -> Result<(&str, String), ParseError> {
+        fn parse_ex1(s: &str) -> Result<(&str, String), ParsingError> {
             Ok((s, String::from("Example1")))
         }
 
-        fn parse_ex3(s: Cursor) -> Result<(Cursor, String), ParseError> {
+        fn parse_ex3(s: Cursor) -> Result<(Cursor, String), ParsingError> {
             Ok((s, String::from("Example3")))
         }
 
         let selfie = StructEx;
 
-        let f: for<'a> fn(&'a str) -> Result<(&'a str, String), ParseError> = parse_ex1;
+        let f: for<'a> fn(&'a str) -> Result<(&'a str, String), ParsingError> = parse_ex1;
         let tup_ex2 = (&selfie, StructEx::parse_ex2 as StrMethod<_, _>);
         lp("parse_ex1 as ...     ".into(), f);
         lp("parse_ex1 as StrFunc ".into(), parse_ex1 as StrFunc<_, _>);

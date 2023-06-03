@@ -32,7 +32,7 @@ subsequent methods has no effect (similar to repeatedly calling next() having re
 
 ```
 use daisychain::prelude::*;
-use daisychain::prelude::dc::Cursor;
+use daisychain::prelude::Cursor;
 
 let _ = Cursor::from("The quick brown fox jumps over the lazy dog")
     .find("quick")
