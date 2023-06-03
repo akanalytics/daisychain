@@ -41,7 +41,7 @@ mod tests {
     fn test_parse_enum() -> Result<(), ParsingError> {
         // from_str expects the whole string to match
         assert_eq!(Color::from_str("Red")?, Color::Red);
-        assert_eq!(Color::from_str("Red Arrow").is_err(), true);
+        assert!(Color::from_str("Red Arrow").is_err());
 
         // parse_enum consumes only what it needs for matching
         let (c, color) = parse_enum("Red Arrow")?;

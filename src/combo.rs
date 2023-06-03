@@ -48,16 +48,16 @@ pub trait Parser<'a>: Sized {
     }
 }
 
-fn func_ws<'a>(s: &str) -> Result<&str, ParsingError> {
+fn func_ws(s: &str) -> Result<&str, ParsingError> {
     Ok(s.trim_start())
 }
 
-type LEXER = for<'b> fn(&'b str) -> Result<&'b str, ParsingError>;
+type Lexer = for<'b> fn(&'b str) -> Result<&'b str, ParsingError>;
 
-impl<'a> StrParser<'a, &'a str> for LEXER {}
+impl<'a> StrParser<'a, &'a str> for Lexer {}
 
 pub trait StrParser<'a, O>: Parser<'a, Input = &'a str, Output = O, Error = ParsingError> {
-    fn ws(self) -> Chain<'a, Self, LEXER> {
+    fn ws(self) -> Chain<'a, Self, Lexer> {
         self.chain_parser(func_ws)
     }
 
@@ -115,8 +115,6 @@ where
     }
 }
 
-
-
 // impl<'a, T, O> StrParser<'a, O> for ParseSelection<'a, (&'a str, T)>
 // where
 //     T: FromStr + Debug,
@@ -148,7 +146,6 @@ where
         })
     }
 }
-
 
 pub struct Chain<'a, P1, P2> {
     p1: P1,
@@ -225,8 +222,7 @@ where
         );
         let o2: P2::Output = self.p2.validate(s.clone())?;
         trace!("o2: {p2}({s:?}) -> Ok({o2:?})", p2 = self.p2.name(""));
-        let o12: <(P1::Output, P2::Output) as ConcatTuple<P1::Output, P2::Input>>::Output =
-            ConcatTuple::concat((o1, o2));
+        let o12: Self::Output = ConcatTuple::concat((o1, o2));
         trace!("o12: {o12:?}");
         Ok(o12)
     }
@@ -474,15 +470,15 @@ mod tests {
     fn test_combo() {
         // define a simple lexer+parser
         assert_eq!(SP.validate("cat").unwrap(), "cat");
-        fn tail_lexer<'a>(s: &'a str) -> Result<&'a str, ParsingError> {
+        fn tail_lexer(s: &str) -> Result<&str, ParsingError> {
             Ok(&s[1..])
         }
 
-        fn ws<'a>(s: &'a str) -> Result<&'a str, ParsingError> {
+        fn ws(s: &str) -> Result<&str, ParsingError> {
             Ok(s.trim_start())
         }
 
-        fn num_parser<'a>(s: &'a str) -> Result<(&'a str, i32), ParsingError> {
+        fn num_parser(s: &str) -> Result<(&str, i32), ParsingError> {
             Ok((&s[1..], s[0..=0].parse::<i32>()?))
         }
         #[derive(Default)]
@@ -527,5 +523,4 @@ mod tests {
         assert_eq!(d2, 4);
         println!("{}", parser5.name(""));
     }
-    
 }

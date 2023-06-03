@@ -63,7 +63,7 @@ pub fn parse_clock_v2(c: &str) -> Result<(&str, Time), ParsingError> {
             "PM" => Time::new(time.hours + 12, time.mins),
             _ => unreachable!(),
         };
-        return Ok((c1, time)); // assume 24 hour clock
+        Ok((c1, time)) // assume 24 hour clock
     }
 }
 
@@ -74,29 +74,29 @@ mod tests {
 
     #[test]
     fn test_parse_clock() -> Result<(), ParsingError> {
-        assert_eq!(parse_clock("11:35 AM".into())?.1, Time::new(11, 35));
-        assert_eq!(parse_clock("11:59 PM".into())?.1, Time::new(23, 59));
-        assert_eq!(parse_clock("01:59".into())?.1, Time::new(1, 59));
-        assert_eq!(parse_clock("1:59".into()).is_err(), true);
+        assert_eq!(parse_clock("11:35 AM")?.1, Time::new(11, 35));
+        assert_eq!(parse_clock("11:59 PM")?.1, Time::new(23, 59));
+        assert_eq!(parse_clock("01:59")?.1, Time::new(1, 59));
+        assert_eq!(parse_clock("1:59").is_err(), true);
 
         // check that the cursor is left at the right terminating position
-        assert_eq!(parse_clock("11:35 AM X".into())?.0, "X");
-        assert_eq!(parse_clock("11:59 PM Y".into())?.0, "Y");
-        assert_eq!(parse_clock("01:59 Z".into())?.0, "Z");
+        assert_eq!(parse_clock("11:35 AM X")?.0, "X");
+        assert_eq!(parse_clock("11:59 PM Y")?.0, "Y");
+        assert_eq!(parse_clock("01:59 Z")?.0, "Z");
         Ok(())
     }
 
     #[test]
     fn test_parse_clock_v2() -> Result<(), ParsingError> {
-        assert_eq!(parse_clock_v2("11:35 AM".into())?.1, Time::new(11, 35));
-        assert_eq!(parse_clock_v2("11:59 PM".into())?.1, Time::new(23, 59));
-        assert_eq!(parse_clock_v2("01:59".into())?.1, Time::new(1, 59));
-        assert_eq!(parse_clock_v2("1:59".into()).is_err(), true);
+        assert_eq!(parse_clock_v2("11:35 AM")?.1, Time::new(11, 35));
+        assert_eq!(parse_clock_v2("11:59 PM")?.1, Time::new(23, 59));
+        assert_eq!(parse_clock_v2("01:59")?.1, Time::new(1, 59));
+        assert_eq!(parse_clock_v2("1:59").is_err(), true);
 
         // check that the cursor is left at the right terminating position
-        assert_eq!(parse_clock_v2("11:35 AM X".into())?.0, "X");
-        assert_eq!(parse_clock_v2("11:59 PM Y".into())?.0, "Y");
-        assert_eq!(parse_clock_v2("01:59 Z".into())?.0, "Z");
+        assert_eq!(parse_clock_v2("11:35 AM X")?.0, "X");
+        assert_eq!(parse_clock_v2("11:59 PM Y")?.0, "Y");
+        assert_eq!(parse_clock_v2("01:59 Z")?.0, "Z");
         Ok(())
     }
 }

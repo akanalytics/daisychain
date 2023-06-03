@@ -118,7 +118,7 @@ where
     let start = start.unwrap_or_default() as usize;
     let end = end.unwrap_or(i32::MAX) as usize;
 
-    if let Some((i, _t)) = s.match_indices(pred).nth(0) {
+    if let Some((i, _t)) = s.match_indices(pred).next() {
         if i >= start && i <= end + 1 {
             let cur = cur.set_str(&s[i..]);
             cur.log_success(action, args);
@@ -126,7 +126,7 @@ where
         }
     } else if rb.contains(&0) {
         // if 0 in range we can always return where we are
-        return cur.set_str(&s);
+        return cur.set_str(s);
     } else {
         let len = s.chars().count();
         if len < start {
@@ -153,7 +153,7 @@ where
         args: "no match",
     };
     cur.log_failure(action, args, &e);
-    return cur.set_error(e);
+    cur.set_error(e)
 }
 
 #[inline]
@@ -286,7 +286,7 @@ pub trait Selectable<'a>: Matchable<'a> {
         self.log_inputs("parse_selection_as_str", "");
         if let Ok(text) = self.get_selection() {
             if let Ok(_cur) = self.str() {
-                self.log_success_with_result("----> parse_selection_as_str", "", &text);
+                self.log_success_with_result("----> parse_selection_as_str", "", text);
                 return (self, Some(text));
             }
         }
@@ -655,7 +655,7 @@ pub trait Matchable<'a>: Sized {
             return (self, None)
         };
         loop {
-            match (parser)(str.clone()) {
+            match (parser)(str) {
                 Ok((s, t)) => {
                     self.log_success_with_result(
                         "----> parse_struct_vec",
@@ -686,7 +686,7 @@ pub trait Matchable<'a>: Sized {
     {
         let mut str = self.str()?;
         loop {
-            match (parser)(str.clone()) {
+            match (parser)(str) {
                 Ok((s, t)) => {
                     vec.extend(std::iter::once(t));
                     str = s;
@@ -1301,7 +1301,7 @@ mod tests {
         Ok((c, Time(hh, mm, sss)))
     }
 
-    fn parse_time_v4<'a>(s: &str) -> Result<(&str, Time), ParsingError> {
+    fn parse_time_v4(s: &str) -> Result<(&str, Time), ParsingError> {
         let (c, hh, mm, sss) = Cursor::from(s)
             .selection_start()
             .digits(2..=2)

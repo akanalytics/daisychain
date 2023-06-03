@@ -85,7 +85,7 @@ mod tests {
         use OneChar::*;
         assert_eq!(parse_char("1")?.1, Digit(1));
         assert_eq!(parse_char("A")?.1, Letter('A'));
-        assert_eq!(parse_char("").is_err(), true);
+        assert!(parse_char("").is_err());
 
         // check that the cursor is left at the right terminating position
         assert_eq!(parse_char("1X")?.0, "X");
@@ -100,7 +100,7 @@ mod tests {
         assert_eq!(parse_event("11:35")?.1, TimeOnly(t));
         assert_eq!(parse_event("Wed 11:35")?.1, DayTime(Day::Wed, t));
         assert_eq!(parse_event("Wed")?.1, DayOnly(Day::Wed));
-        assert_eq!(parse_event("X").is_err(), true);
+        assert!(parse_event("X").is_err());
 
         // check that the cursor is left at the right terminating position
         assert_eq!(parse_event("11:35 X")?.0, "X");

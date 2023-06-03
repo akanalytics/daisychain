@@ -59,13 +59,13 @@ mod tests {
     #[test]
     fn test_parse_number() {
         // from_str expects the whole string to match
-        assert_eq!(parse_number("123".into()).unwrap().1, Number::Decimal(123));
-        assert_eq!(parse_number("0b1001".into()).unwrap().1, Number::Binary(9));
-        assert_eq!(parse_number("0xFF".into()).unwrap().1, Number::Hex(255));
-        assert_eq!(parse_number("n/a".into()).is_err(), true);
+        assert_eq!(parse_number("123").unwrap().1, Number::Decimal(123));
+        assert_eq!(parse_number("0b1001").unwrap().1, Number::Binary(9));
+        assert_eq!(parse_number("0xFF").unwrap().1, Number::Hex(255));
+        assert!(parse_number("n/a").is_err());
 
         // 0b201 will parse as a decimal zero, with cursor moved to 0|b201
-        let (c, var) = parse_number("0b201".into()).unwrap();
+        let (c, var) = parse_number("0b201").unwrap();
         assert_eq!(var, Number::Decimal(0));
         assert_eq!(c, "b201");
     }

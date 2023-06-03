@@ -6,6 +6,10 @@
 #![warn(clippy::complexity)]
 #![warn(clippy::perf)]
 #![allow(mixed_script_confusables)]
+#![allow(clippy::redundant_closure)]
+#![allow(clippy::bool_assert_comparison)]
+
+
 
 use std::cell::Cell;
 

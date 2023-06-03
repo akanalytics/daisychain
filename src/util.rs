@@ -10,5 +10,5 @@ pub fn formatter_str(c: &str) -> String {
     let s = s.replace("\\\"", "\"");
     let s = s.replace("\\\'", "\'");
     let s = &s[..s.len().min(33)];
-    format!("{:<35}", "|".to_string() + &s + &"|")
+    format!("{:<35}", "|".to_string() + s + "|")
 }

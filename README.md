@@ -25,7 +25,7 @@ struct Time {
 }
 
 impl FromStr for Time {
-    type Err = dc::ParseError;
+    type Err = ParsingError;
 
     /// eg "09:23" or "23:59"
     fn from_str(s: &str) -> Result<Self, Self::Err> {
